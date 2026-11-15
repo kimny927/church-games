@@ -1,6 +1,6 @@
 import type { Game } from "./types";
 
-// 임시 샘플 데이터예요. Supabase를 연결하면 실제 데이터로 바뀝니다.
+// 임시 샘플 데이터예요. Neon 연결 후(2주차) 실제 데이터로 바뀝니다. 같은 내용이 neon/seed.sql 에도 있어요.
 // 링크는 예시 주소라 실제 게임 링크로 교체해야 해요.
 export const sampleGames: Game[] = [
   {

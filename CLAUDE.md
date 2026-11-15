@@ -79,11 +79,14 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run dev`: 로컬 실행 (http://localhost:3000)
 - `npm run build`: 빌드 확인. PR 올리기 전에 반드시 통과시킬 것
 - `npm run lint`: 린트
+- `npm run db:check`: Neon 연결 확인 (`.env.local`의 `DATABASE_URL` 사용, 상태별 게임 개수 출력)
 
 ## 코드 구조
 **사용자 페이지:**
 - `src/lib/types.ts`: 게임 타입과 필터 옵션. Neon DB 스키마와 맞춘다.
-- `src/lib/sample-games.ts`: 임시 샘플 데이터. Neon 연결 후 교체 예정
+- `src/lib/sample-games.ts`: 임시 샘플 데이터. 2주차에 `db.ts` 조회로 교체 예정
+- `src/lib/db.ts`: Neon 연결(HTTP 드라이버)과 게임 조회 함수. 서버에서만 import
+- `neon/schema.sql`, `neon/seed.sql`: DB 스키마와 샘플 데이터 (Neon 콘솔 SQL Editor에서 실행)
 - `src/components/GameBrowser.tsx`: 목록 + 검색 + 필터 (클라이언트 컴포넌트)
 - `src/app/games/[id]/page.tsx`: 게임 상세 페이지
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
@@ -148,7 +151,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 제외 키워드 (예: "신천지", "이단" 포함 콘텐츠 자동 거절)
 
 **Neon DB에 저장되는 심의 정보:**
-- `status`: 'pending', 'approved', 'rejected', 'modified'
+- `status`: 'pending', 'approved', 'rejected' (사용자 페이지에는 'approved'만 표시. 관리자 수정 여부는 `updated_at`으로 확인)
 - `approved_by`: 심의한 운영자 ID
 - `approved_at`: 심의 시간
 - `rejection_reason`: 거절 사유
@@ -163,25 +166,22 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - Cloudflare Workers는 10초 제한이 있으므로 복잡한 로직은 GitHub Actions에서 처리.
 - Firebase Storage 5GB 무료 한계 모니터링 (초과 시 월 ~$2 추가 비용).
 
-## Neon DB 스키마 (초기)
-- 기존 게임 테이블에 다음 칼럼 추가:
-  - `status`: 'pending', 'approved', 'rejected', 'modified'
-  - `source_url`: 원본 블로그/유튜브/노션 링크
-  - `auto_scraped`: true/false (A방식 vs B방식)
-  - `approved_by`: 심의자 ID
-  - `approved_at`: 심의 시간
-  - `rejection_reason`: 거절 사유
-- 참고: `supabase/schema.sql` → `neon/schema.sql`로 이름 변경 후 수정
+## Neon DB 스키마 (`neon/schema.sql`)
+- 지금은 `games` 테이블만 있다. 회원·댓글·후기는 로그인 방식을 정하는 4주차에 추가.
+- 심의 칼럼: `status`('pending'/'approved'/'rejected'), `auto_scraped`(A방식 false / B방식 true), `approved_by`, `approved_at`, `rejection_reason`(거절 시 필수, DB 제약조건), `admin_notes`, `updated_at`(트리거로 자동 갱신)
+- 원본 링크는 `link` 칼럼 (별도 `source_url` 없음)
+- Neon에는 Supabase의 auth·RLS가 없다. 브라우저는 DB에 직접 붙지 않고, 서버 코드가 권한을 판단한다 (사용자 페이지는 `approved`만 조회).
+- DB 칼럼은 snake_case, `Game` 타입은 camelCase. 변환은 `src/lib/db.ts`에서.
 
 ## 환경변수 설정 (Cloudflare + Neon + Firebase)
+`.env.example`을 복사해 `.env.local`을 만든다. Neon 연결은 어디서든 `DATABASE_URL` 하나로 쓴다.
 ```
-# Cloudflare Workers
-NEON_CONNECTION_STRING=postgresql://user:password@...
+# Neon (Next.js 서버, Cloudflare Workers, GitHub Actions 공통)
+DATABASE_URL=postgresql://user:password@...
+
+# Firebase Storage (예정)
 FIREBASE_STORAGE_BUCKET=...
 FIREBASE_API_KEY=...
-
-# GitHub Actions (스크래핑용)
-NEON_DATABASE_URL=postgresql://...
 ```
 
 ## 참고자료

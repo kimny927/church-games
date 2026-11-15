@@ -8,10 +8,10 @@
 - 게임 상세 페이지 (`src/app/games/[id]/page.tsx`)
 - 하단 신천지 금지 안내 (`src/components/Footer.tsx`)
 - 샘플 게임 3개 (`src/lib/sample-games.ts`, 링크는 예시 주소)
-- DB 스키마 초안 (`supabase/schema.sql`, Neon용 `neon/schema.sql`로 옮길 예정)
+- DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만)
 
 ## 다음 할 일
-- Neon DB 연결 후 노션 게임 DB 내용을 옮겨오기
+- 노션 게임 DB 내용을 Neon으로 옮겨오기
 - Cloudflare Pages 자동 배포 연결
 - 관리자 페이지(심의 포함), 카카오 로그인, 팁 댓글·좋아요·후기
 
