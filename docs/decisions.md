@@ -3,6 +3,10 @@
 새 결정을 내리면 위에 추가합니다. (날짜 · 결정 · 이유)
 
 ## 2026-11-15
+- **심의 status는 영어 3개: `pending` / `approved` / `rejected`.** DB 값은 코드·Workers에서 다루기 쉬운 영어로 두고 화면에서 한국어로 보여준다. `modified`는 상태가 아니라 행동이라 뺐고, 수정 여부는 `updated_at`으로 안다. (기존 Supabase 초안의 한국어 status를 대체)
+- **Neon 스키마는 `games` 테이블만 먼저.** 회원·댓글·후기는 로그인 방식이 정해지는 4주차에 만든다. 인증이 미정인 채로 회원 테이블을 만들면 다시 고칠 가능성이 크다.
+- **권한은 DB(RLS)가 아니라 서버 코드가 판단.** Neon에는 Supabase의 auth·RLS가 없다. 브라우저는 DB에 직접 붙지 않는다.
+- **Neon 연결 환경변수는 `DATABASE_URL` 하나로 통일.** Neon 대시보드 기본 이름이고, 실행 위치(Next.js·Workers·Actions)마다 이름을 다르게 둘 이유가 없다.
 - **깃 플로우는 GitHub Flow 간소화, 병합은 Squash만.** Git Flow는 1인 개발 + main 자동 배포에 과하다. Squash는 main의 커밋 1개가 기능 1개가 되어 읽고 되돌리기 쉽다. (자세한 규칙: `docs/git-flow.md`)
 - **규칙은 시스템으로 강제: PR 빌드 CI + main 브랜치 보호(관리자 예외).** 글로만 둔 규칙은 사람도 AI도 놓친다. public 저장소라 둘 다 무료다.
 - **브랜치 설명은 영어 kebab-case.** 처음엔 한글을 골랐지만 Cloudflare Pages가 영문·숫자 외 글자를 `-`로 바꿔 미리보기 별칭이 겹칠 수 있어 바꿨다.
