@@ -11,7 +11,6 @@
 - DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만)
 
 ## 다음 할 일
-- 노션 게임 DB 내용을 Neon으로 옮겨오기
 - Cloudflare Pages 자동 배포 연결
 - 관리자 페이지(심의 포함), 카카오 로그인, 팁 댓글·좋아요·후기
 
