@@ -32,6 +32,7 @@ Git Flow(develop·release 브랜치)는 1인 개발 + main 자동 배포 구조�
 2. 브랜치 생성: `git switch -c feat/game-filter`
 3. 작업 + 커밋 (브랜치 안의 커밋은 자유롭게, 병합 때 하나로 합쳐진다)
 4. PR 전 확인: `npm run lint` · `npm run build` 통과, 모바일 화면 확인
+   - 스택·명령어·폴더 구조·규칙을 바꿨다면 문서 점검(Claude Code 전역 스킬 `/doc-drift-check`)으로 CLAUDE.md·README·docs가 어긋나지 않았는지 확인
 5. push 후 PR 생성: `git push -u origin feat/game-filter` → `gh pr create`
 6. CI 통과 + 나연 리뷰 후 **Squash 병합**
 7. 정리: 원격·로컬 브랜치 삭제, 로컬 main 동기화
