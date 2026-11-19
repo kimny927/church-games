@@ -22,4 +22,4 @@ npm run dev   # http://localhost:3000
 ```
 
 ## 기술 스택
-Next.js · Tailwind CSS · Cloudflare Workers(OpenNext) · Neon PostgreSQL · Firebase Storage
+Next.js · Tailwind CSS · Cloudflare Workers(OpenNext) · Neon PostgreSQL · Firebase Storage(예정)
