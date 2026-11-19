@@ -87,8 +87,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 ## 코드 구조
 **사용자 페이지:**
 - `src/lib/types.ts`: 게임 타입과 필터 옵션. Neon DB 스키마와 맞춘다.
-- `src/lib/sample-games.ts`: 임시 샘플 데이터. 2주차에 `db.ts` 조회로 교체 예정
-- `src/lib/db.ts`: Neon 연결(HTTP 드라이버)과 게임 조회 함수. 서버에서만 import
+- `src/lib/db.ts`: Neon 연결(HTTP 드라이버)과 게임 조회 함수. 서버에서만 import. 목록·상세 페이지가 요청마다 여기서 승인된 게임을 읽는다(SSR, `force-dynamic`)
 - `neon/schema.sql`, `neon/seed.sql`: DB 스키마와 샘플 데이터 (Neon 콘솔 SQL Editor에서 실행)
 - `src/components/GameBrowser.tsx`: 목록 + 검색 + 필터 (클라이언트 컴포넌트)
 - `src/app/games/[id]/page.tsx`: 게임 상세 페이지
