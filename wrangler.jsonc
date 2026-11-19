@@ -7,6 +7,9 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-11-18",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // 운영 주소 church-games.<계정>.workers.dev 와 PR 미리보기 주소 <버전>-church-games.<계정>.workers.dev 를 켠다.
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
