@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getGame, sampleGames } from "@/lib/sample-games";
+import { getPublishedGame } from "@/lib/db";
 
-export function generateStaticParams() {
-  return sampleGames.map((g) => ({ id: g.id }));
-}
+// 요청마다 DB에서 읽는다(SSR). 승인되지 않은 게임은 조회되지 않아 404가 된다.
+export const dynamic = "force-dynamic";
 
 export default async function GamePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const game = getGame(id);
+  const game = await getPublishedGame(id);
   if (!game) notFound();
 
   const rows: [string, string | undefined][] = [

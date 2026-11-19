@@ -7,11 +7,12 @@
 - 게임 목록 + 검색(이름·말씀·태그) + 카테고리 필터 (`src/components/GameBrowser.tsx`)
 - 게임 상세 페이지 (`src/app/games/[id]/page.tsx`)
 - 하단 신천지 금지 안내 (`src/components/Footer.tsx`)
-- 샘플 게임 3개 (`src/lib/sample-games.ts`, 링크는 예시 주소)
-- DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만)
+- Neon DB에서 승인된 게임만 읽어 표시 (`src/lib/db.ts`)
+- DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만, 샘플 링크는 예시 주소)
+- Cloudflare Workers 자동 배포 (main 병합 시 운영, 다른 브랜치는 미리보기)
 
 ## 다음 할 일
-- Cloudflare Workers 자동 배포 연결
+- 검색 개선
 - 관리자 페이지(심의 포함), 카카오 로그인, 팁 댓글·좋아요·후기
 
 ## 내 컴퓨터에서 실행하기
