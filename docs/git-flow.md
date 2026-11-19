@@ -4,7 +4,7 @@ GitHub Flow를 간소화해서 쓴다. main 하나와 짧게 사는 작업 브�
 Git Flow(develop·release 브랜치)는 1인 개발 + main 자동 배포 구조에는 과하다.
 
 ## 원칙
-- **main = 항상 배포 가능한 상태.** main 병합이 곧 운영 배포다 (Cloudflare Pages).
+- **main = 항상 배포 가능한 상태.** main 병합이 곧 운영 배포다 (Cloudflare Workers).
 - **main에 직접 커밋·push하지 않는다.** 모든 변경은 브랜치 → PR → 병합.
 - **기능 하나 = 브랜치 하나 = PR 하나.** 며칠 안에 병합할 수 있는 크기로 나눈다.
 

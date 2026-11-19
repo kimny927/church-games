@@ -1,0 +1,14 @@
+// Cloudflare Workers 배포 설정 (OpenNext 어댑터). 대시보드의 Worker 이름과 name 이 같아야 Git 자동 배포가 붙는다.
+// DATABASE_URL 같은 비밀값은 여기에 쓰지 말고 Cloudflare 대시보드 > Settings > Variables and Secrets 에 넣는다.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "church-games",
+  // main, assets 는 opennextjs-cloudflare build 결과물 위치. 빌드 방식을 바꾸지 않는 한 그대로 둔다.
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+}
