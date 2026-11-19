@@ -5,6 +5,7 @@
 ## 2026-11-19
 - **배포는 Cloudflare Pages가 아니라 Workers + OpenNext 어댑터(`@opennextjs/cloudflare`).** Cloudflare가 풀스택 Next.js를 Workers로 안내하고, Pages용 `next-on-pages`는 Edge 런타임만 지원해 더는 권장되지 않는다. Cloudflare 기본 추천인 vinext는 베타라 정식 버전인 OpenNext를 골랐다. (2026-11-11 기술 스택 결정의 'Cloudflare Pages' 부분을 대체)
 - **렌더링은 SSR부터, 캐시(ISR)는 나중에.** ISR은 R2·Durable Objects 큐 등 설정이 늘어나는데 게임 수십 개 규모엔 과하다. SSR이면 `DATABASE_URL`이 런타임에만 필요해서 CI 빌드에 비밀키를 넣지 않아도 된다. 느려지면 그때 캐시를 붙인다.
+- **소스 종류(`source_type`)는 블로그·유튜브·인스타그램·기타 4개로 고정.** 문서에만 있던 '노션' 소스는 따로 두지 않고 '기타'로 넣는다. 노션 공개 페이지로 공유되는 게임이 드물어 DB 제약조건까지 바꿀 이유가 없다.
 
 ## 2026-11-15
 - **노션 게임 데이터를 Neon으로 옮기는 작업은 뺀다.** 노션 게임 DB에 아직 옮길 데이터가 없다.

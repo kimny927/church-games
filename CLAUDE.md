@@ -8,7 +8,7 @@
   - `docs/dev-plan.md`: 1단계 MVP 범위와 일정
   - `docs/decisions.md`: 지금까지 내린 결정과 이유
 - 사람: 진선(아이디어·기획), 나연(개발). 문서에서 '친구'라고 쓰지 말고 이름으로 쓴다.
-- 기획 원본과 게임 큐레이션 데이터는 노션에 있음 (`docs/project-overview.md`의 링크 참고)
+- 기획 원본은 노션에 있음 (`docs/project-overview.md`의 링크 참고). 게임 데이터는 Neon `games` 테이블이 기준이다 (노션 게임 DB는 비어 있음)
 
 ## 작업 방식
 - 나연은 개발자이고, AI-Native Engineer 역량을 키우는 것이 목표다. 결과만 내지 말고 무엇을 왜 하는지 짧게 설명할 것.
@@ -62,17 +62,17 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - 설정: `wrangler.jsonc`, `open-next.config.ts`. Edge 런타임(`export const runtime = "edge"`)은 쓰지 않는다
 
 **백엔드·데이터:**
-- Cloudflare Workers (서버리스 함수, 스크래핑/API 로직)
-- Neon PostgreSQL (무료, 1GB × 100 프로젝트)
+- Neon PostgreSQL (무료, 1GB × 100 프로젝트). 지금 사용 중
+- Cloudflare Workers 서버 로직 (예정, 3주차: 링크 메타데이터 추출·관리 API)
 
-**파일 저장:**
+**파일 저장 (예정):**
 - Firebase Storage (무료, 5GB)
 
 **자동화:**
-- GitHub Actions (무료, 정기적인 콘텐츠 스크래핑)
+- GitHub Actions: 지금은 PR 빌드 CI(`ci.yml`)만. 정기 콘텐츠 스크래핑은 MVP 이후
 
-**인증 (예정):**
-- Supabase Auth (카카오 로그인) 또는 직접 구현
+**인증 (예정, 4주차에 결정):**
+- 카카오 로그인. 후보: Better Auth(Neon에 직접 저장) 또는 카카오 OAuth 직접 구현
 
 **특징:** 완전 무료로 시작, 상업 사용 가능 (광고 포함), 트래픽 증가 시에만 비용 발생
 
@@ -93,34 +93,37 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/app/games/[id]/page.tsx`: 게임 상세 페이지
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
 
-**관리자 페이지:**
-- `src/app/admin/`: 관리자 전용 페이지 (카카오 로그인 후 접근)
-  - `moderation/page.tsx`: 콘텐츠 심의 (대기 중 게임 검토, 승인/거절/수정)
-  - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정)
-  - `analytics/page.tsx`: 스크래핑 현황 (선택사항)
+아래는 아직 없는 파일이다. 만들 때 이 구조를 따른다.
 
-**Cloudflare Workers:**
+**관리자 페이지 (예정, 3주차):**
+- `src/app/admin/`: 관리자 전용 페이지 (로그인 후 접근)
+  - `moderation/page.tsx`: 콘텐츠 심의 (대기 중 게임 검토, 승인/거절/수정)
+  - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
+  - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
+
+**Cloudflare Workers (예정, 3주차):**
 - `workers/scrape.ts`: 메타데이터 추출 (제목, 설명, 썸네일, 링크)
-- `workers/filtering.ts`: 필터링 로직 (자동 필터링 규칙 적용)
+- `workers/filtering.ts`: 필터링 로직 (자동 필터링 규칙 적용) (MVP 이후)
 - `workers/api.ts`: 관리 API (게임 승인/거절/수정 엔드포인트)
 
 **GitHub Actions:**
-- `.github/workflows/scrape.yml`: 자동 스크래핑 (매일 자정 실행)
+- `.github/workflows/ci.yml`: PR·main push마다 lint + build (지금 있음)
+- `.github/workflows/scrape.yml`: 자동 스크래핑 (MVP 이후, 매일 자정 실행)
 
 ## 콘텐츠 수집 방식
 
 **2가지 병렬 지원:**
 
 **A. 반자동 (수동 입력 + 자동 추출)**
-- 진선이가 블로그/유튜브/노션 URL 입력
+- 진선이가 블로그/유튜브/인스타그램 URL 입력 (노션 공개 페이지 등 그 밖의 곳은 '기타')
 - Cloudflare Workers가 자동으로 메타데이터 추출 (제목, 설명, 썸네일, 링크)
 - 즉시 또는 심의 후 사용자 페이지 표시
 - 장점: 신뢰할 수 있는 콘텐츠만 추가, 품질 관리 용이
 - 시간: 진선이가 월 5~15개 정도 입력 가능
 
-**B. 완전 자동 (GitHub Actions로 정기 스크래핑)**
+**B. 완전 자동 (GitHub Actions로 정기 스크래핑, MVP 이후)**
 - GitHub Actions가 매일 자정에 자동 실행
-- RSS 피드, 블로그, 유튜브, 노션 등에서 자동 수집
+- RSS 피드(블로그, 유튜브 채널) 위주로 자동 수집
 - 메타데이터 자동 추출 후 Neon에 저장 (status: 'pending')
 - 진선이 심의 후 승인 필요 (또는 자동 승인 설정 가능)
 - 장점: 콘텐츠 풍부, 최신 정보 자동 업데이트
@@ -142,10 +145,10 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 사용: 높은 품질 유지, 필터링 필요
 - 심의 시간: 1~2시간/일 (운영 초기)
 
-**소스별 개별 설정:**
+**소스별 개별 설정 (`source_type`: 블로그·유튜브·인스타그램·기타):**
 - 유튜브: 수동 승인 필수
 - 블로그: 자동 승인 가능
-- 노션: 수동 승인 필수 (진선이 큐레이션 우선)
+- 인스타그램·기타: 수동 승인 필수 (진선이 큐레이션 우선)
 
 **자동 필터링 규칙:**
 - 최소 길이 제한 (예: 60초 이상 영상만)
@@ -162,10 +165,10 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 ## 지켜야 할 것
 - 외부 게임은 원본 내용을 복사하지 않고 '요약 + 원본 링크'로 소개한다 (저작권).
 - 모바일 화면에서 먼저 확인한다 (사용자는 주로 휴대폰으로 볼 것).
-- 비밀키(Neon DB 연결, Firebase API 키 등)는 절대 커밋하지 않는다. `.env.local` 또는 Cloudflare 환경변수 사용.
+- 비밀키(Neon DB 연결, Firebase API 키 등)는 절대 커밋하지 않는다. `.env.local` 또는 Cloudflare 런타임 Secret 사용.
 - 스크래핑할 때 각 사이트의 `robots.txt`와 이용약관 확인 (무단 크롤링 방지).
 - 자동 스크래핑은 RSS 피드 우선, HTML 파싱은 최후의 수단 (부하 고려).
-- Cloudflare Workers는 10초 제한이 있으므로 복잡한 로직은 GitHub Actions에서 처리.
+- Cloudflare Workers 무료 플랜은 요청당 CPU 시간 10ms, 외부 호출(subrequest) 50개로 제한된다 (응답 대기 시간은 CPU에 안 들어감, 2026-11 공식 문서 기준). 여러 사이트를 도는 스크래핑처럼 CPU·외부 호출이 많은 작업은 GitHub Actions에서 처리.
 - Firebase Storage 5GB 무료 한계 모니터링 (초과 시 월 ~$2 추가 비용).
 
 ## Neon DB 스키마 (`neon/schema.sql`)
@@ -177,6 +180,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 ## 환경변수 설정 (Cloudflare + Neon + Firebase)
 `.env.example`을 복사해 `.env.local`을 만든다. Neon 연결은 어디서든 `DATABASE_URL` 하나로 쓴다.
+- 배포 환경: Cloudflare 대시보드 > church-games > Settings > **Variables and Secrets**(런타임)에 Secret으로 넣는다. Build 아래의 변수는 빌드 때만 보여서 SSR에서 못 읽는다. `npx wrangler secret list`로 확인.
+- 값을 바꾸면 이미 만들어진 미리보기 버전에는 반영되지 않는다. 브랜치에 다시 push해서 새로 빌드한다.
 ```
 # Neon (Next.js 서버, Cloudflare Workers, GitHub Actions 공통)
 DATABASE_URL=postgresql://user:password@...
@@ -193,7 +198,8 @@ FIREBASE_API_KEY=...
   
 - **기술 문서:**
   - Neon PostgreSQL: https://neon.tech/docs
-  - Cloudflare Pages & Workers: https://developers.cloudflare.com
+  - Cloudflare Workers (Next.js/OpenNext): https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
+  - Workers 한도: https://developers.cloudflare.com/workers/platform/limits/
   - Firebase Storage: https://firebase.google.com/docs/storage
   - GitHub Actions: https://docs.github.com/en/actions
   
