@@ -58,7 +58,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 ## 기술 스택
 **프론트엔드·배포:**
 - Next.js 15 (App Router, `src/app`), TypeScript, Tailwind CSS 4
-- Cloudflare Pages (무료, 상업 사용 OK) + GitHub 자동 배포
+- Cloudflare Workers + OpenNext 어댑터 (`@opennextjs/cloudflare`, 무료, 상업 사용 OK) + GitHub 자동 배포(Workers Builds)
+  - 설정: `wrangler.jsonc`, `open-next.config.ts`. Edge 런타임(`export const runtime = "edge"`)은 쓰지 않는다
 
 **백엔드·데이터:**
 - Cloudflare Workers (서버리스 함수, 스크래핑/API 로직)
@@ -79,6 +80,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run dev`: 로컬 실행 (http://localhost:3000)
 - `npm run build`: 빌드 확인. PR 올리기 전에 반드시 통과시킬 것
 - `npm run lint`: 린트
+- `npm run preview`: Cloudflare Workers 런타임으로 로컬 실행 (배포 환경에서만 생기는 문제 확인용)
+- `npm run deploy`: 수동 배포 (평소에는 main 병합 시 자동 배포)
 - `npm run db:check`: Neon 연결 확인 (`.env.local`의 `DATABASE_URL` 사용, 상태별 게임 개수 출력)
 
 ## 코드 구조

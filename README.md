@@ -11,7 +11,7 @@
 - DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만)
 
 ## 다음 할 일
-- Cloudflare Pages 자동 배포 연결
+- Cloudflare Workers 자동 배포 연결
 - 관리자 페이지(심의 포함), 카카오 로그인, 팁 댓글·좋아요·후기
 
 ## 내 컴퓨터에서 실행하기
@@ -21,4 +21,4 @@ npm run dev   # http://localhost:3000
 ```
 
 ## 기술 스택
-Next.js · Tailwind CSS · Cloudflare Pages/Workers · Neon PostgreSQL · Firebase Storage
+Next.js · Tailwind CSS · Cloudflare Workers(OpenNext) · Neon PostgreSQL · Firebase Storage

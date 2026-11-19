@@ -4,7 +4,7 @@ GitHub Flow를 간소화해서 쓴다. main 하나와 짧게 사는 작업 브�
 Git Flow(develop·release 브랜치)는 1인 개발 + main 자동 배포 구조에는 과하다.
 
 ## 원칙
-- **main = 항상 배포 가능한 상태.** main 병합이 곧 운영 배포다 (Cloudflare Pages).
+- **main = 항상 배포 가능한 상태.** main 병합이 곧 운영 배포다 (Cloudflare Workers).
 - **main에 직접 커밋·push하지 않는다.** 모든 변경은 브랜치 → PR → 병합.
 - **기능 하나 = 브랜치 하나 = PR 하나.** 며칠 안에 병합할 수 있는 크기로 나눈다.
 
@@ -23,7 +23,7 @@ Git Flow(develop·release 브랜치)는 1인 개발 + main 자동 배포 구조�
 
 예: `feat/game-filter`, `fix/mobile-header-overflow`, `feat/12-game-filter` (이슈 #12)
 
-설명을 영어로 쓰는 이유: Cloudflare Pages는 브랜치 이름을 미리보기 주소로 바꿀 때 영문·숫자가 아닌 글자를 `-`로 바꾼다.
+설명을 영어로 쓰는 이유: Cloudflare Workers는 브랜치 이름을 미리보기 주소로 바꿀 때 영문·숫자가 아닌 글자를 `-`로 바꾼다.
 한글로 쓰면 `feat/게임-필터`와 `feat/검색-개선`이 같은 주소가 되어 서로 덮어쓸 수 있다.
 한국어 설명은 PR 제목과 커밋 메시지에 쓴다.
 
@@ -61,4 +61,6 @@ PR 하나가 main에서 커밋 하나가 된다. Squash 커밋 메시지(PR 제�
 
 ## 배포
 - main 병합 → 운영 배포
-- 다른 브랜치 → Cloudflare Pages 미리보기 URL (`<브랜치>.<프로젝트>.pages.dev`, 커밋별 `<hash>.<프로젝트>.pages.dev`)
+- 다른 브랜치 → Cloudflare Workers 미리보기 URL (브랜치별 `<브랜치>-church-games.kimny927.workers.dev`, 커밋별 `<버전ID 앞 8자리>-church-games.kimny927.workers.dev`)
+  - URL은 PR의 Checks 탭 → "Workers Builds: church-games" 상세에 나온다 (PR 댓글에는 안 나옴)
+- 운영 주소: `church-games.kimny927.workers.dev`
