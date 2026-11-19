@@ -71,8 +71,9 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 **자동화:**
 - GitHub Actions: 지금은 PR 빌드 CI(`ci.yml`)만. 정기 콘텐츠 스크래핑은 MVP 이후
 
-**인증 (예정, 4주차에 결정):**
-- 카카오 로그인. 후보: Better Auth(Neon에 직접 저장) 또는 카카오 OAuth 직접 구현
+**인증:**
+- 관리자 (3주차): Better Auth 이메일+비밀번호. 역할 `owner`(최고 관리자) / `admin`(관리자), 공개 가입 금지, 해시는 Web Crypto PBKDF2. 이유는 `docs/decisions.md` 2026-11-19
+- 일반 사용자 (4주차에 결정): 카카오 로그인
 
 **특징:** 완전 무료로 시작, 상업 사용 가능 (광고 포함), 트래픽 증가 시에만 비용 발생
 
@@ -96,7 +97,9 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 아래는 아직 없는 파일이다. 만들 때 이 구조를 따른다.
 
 **관리자 페이지 (예정, 3주차):**
-- `src/app/admin/`: 관리자 전용 페이지 (로그인 후 접근)
+- `src/app/admin/`: 관리자 전용 페이지 (관리자 로그인 후 접근, 페이지·서버 액션마다 역할 확인)
+  - `login/page.tsx`, `password/page.tsx`: 로그인, 비밀번호 변경 (임시 비밀번호로 첫 로그인 시 강제)
+  - `admins/page.tsx`: 관리자 계정 관리 (`owner` 전용: 추가 시 임시 비밀번호 표시, 초기화, 역할 변경, 삭제)
   - `moderation/page.tsx`: 콘텐츠 심의 (대기 중 게임 검토, 승인/거절/수정)
   - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
   - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
