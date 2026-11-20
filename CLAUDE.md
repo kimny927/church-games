@@ -86,6 +86,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run db:check`: Neon 연결 확인 (`.env.local`의 `DATABASE_URL` 사용, 상태별 게임 개수 출력)
 - `npx tsx --env-file=.env.local scripts/auth-sql.mts > neon/auth.sql`: Better Auth 테이블 SQL 생성 (DB는 읽기만, Better Auth 업그레이드 후 다시 실행)
 - `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일>`: 첫 최고 관리자 생성, 임시 비밀번호 출력
+- `scripts/test-admin-auth.sh`: 관리자 인증·권한 시나리오 테스트. `npm run preview`를 띄운 뒤 실행 (`@test.local` 테스트 계정을 만들고 끝나면 지움). 인증·권한을 바꾼 PR마다 돌린다
 
 ## 코드 구조
 **사용자 페이지:**
@@ -97,19 +98,22 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
 
 **관리자 인증:**
-- `src/lib/auth.ts`: Better Auth 설정 (역할, 쿠키 캐시 5분, 요청 제한, 비밀번호 변경 후 `mustChangePassword` 해제 hook). 서버에서만 import
+- `src/lib/auth.ts`: Better Auth 설정 (역할, 쿠키 캐시 5분, 요청 제한, hook). 서버에서만 import
+  - 역할 권한: owner에게도 impersonate·ban·이메일 변경은 없다 (승인자 기록을 믿을 수 있게)
+  - `hooks.before`: 관리 API(`/admin/*`)는 DB 기준 owner만, 비밀번호 변경 전이면 거절, 자기 자신 대상 거절 (그래서 owner가 항상 1명 이상 남는다)
+  - `hooks.after`: 비밀번호 변경 성공 시 `mustChangePassword` 해제
 - `src/lib/password.ts`: PBKDF2 비밀번호 해시 (Workers CPU 절약)
 - `src/lib/admin.ts`: `requireAdmin({ role })`. 관리자 페이지·서버 액션 맨 앞에서 부른다. owner 전용 확인은 쿠키 캐시 대신 DB로
 - `src/lib/auth-client.ts`, `src/components/admin/`: 로그인·비밀번호 변경 폼. 요청 제한은 `/api/auth/*` HTTP 경로에만 걸리므로 이 둘은 서버 액션에서 `auth.api`를 직접 부르지 않는다
 - `src/app/api/auth/[...all]/route.ts`: Better Auth HTTP 엔드포인트
 - `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제)
+- `src/app/admin/admins/`: 관리자 관리 (owner 전용: 추가 시 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
 - `neon/auth.sql`: Better Auth 테이블 (user, session, account, verification, rateLimit)
 - 서버에서 `auth.api.createUser` 등 관리 API를 부를 때는 반드시 `headers: await headers()`를 넘긴다. 헤더가 없으면 권한 확인을 건너뛴다 (첫 owner 생성 스크립트만 예외)
 
 아래는 아직 없는 파일이다. 만들 때 이 구조를 따른다.
 
 **관리자 페이지 (예정, 3주차):**
-  - `admins/page.tsx`: 관리자 계정 관리 (`owner` 전용: 추가 시 임시 비밀번호 표시, 초기화, 역할 변경, 삭제)
   - `moderation/page.tsx`: 콘텐츠 심의 (대기 중 게임 검토, 승인/거절/수정)
   - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
   - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
