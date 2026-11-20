@@ -1,18 +1,22 @@
 // Better Auth 설정. 관리자 계정(이메일+비밀번호)만 쓴다. 서버에서만 import.
 import { neon } from "@neondatabase/serverless";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware, isAPIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx, isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
-import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
+import { defaultStatements } from "better-auth/plugins/admin/access";
 import { NeonDialect } from "kysely-neon";
 import { hashPassword, verifyPassword } from "./password";
 
-// 역할: owner(최고 관리자) = 관리자 계정 관리 권한 전부, admin(관리자) = 계정 관리 권한 없음
+// 역할: owner(최고 관리자) = 관리자 계정 관리, admin(관리자) = 계정 관리 권한 없음
+// owner에게도 impersonate(다른 사람으로 로그인)·ban·이메일 변경은 주지 않는다. 승인자(approved_by) 기록을 믿을 수 있게
 export const ac = createAccessControl(defaultStatements);
 const roles = {
-  owner: ac.newRole(adminAc.statements),
+  owner: ac.newRole({
+    user: ["create", "list", "get", "update", "set-role", "set-password", "delete"],
+    session: ["list", "revoke", "delete"],
+  }),
   admin: ac.newRole({ user: [], session: [] }),
 };
 export type AdminRole = keyof typeof roles;
@@ -56,6 +60,28 @@ function createAuth() {
       },
     },
     hooks: {
+      // 관리 API(/admin/*) 공통 규칙. 서버 액션·HTTP 직접 호출 모두 여기를 지난다
+      before: createAuthMiddleware(async (ctx) => {
+        if (!ctx.path.startsWith("/admin/")) return;
+        // 헤더 없는 서버 호출(첫 owner 생성 스크립트)은 권한 확인 자체가 없다
+        if (!ctx.headers) return;
+        // 쿠키 캐시가 아니라 DB의 최신 역할·상태로 판단한다 (역할 변경·초기화가 바로 반영되게)
+        const session = await getAuthoritativeSessionFromCtx(ctx);
+        if (!session) return; // 플러그인이 401로 거절
+        // 플러그인의 역할 확인은 쿠키 캐시 값을 쓸 수 있어, 역할을 내린 직후에도 막히도록 DB 값으로 한 번 더 본다
+        if (session.user.role !== "owner") {
+          throw new APIError("FORBIDDEN", { message: "최고 관리자만 할 수 있어요." });
+        }
+        if (session.user.mustChangePassword) {
+          throw new APIError("FORBIDDEN", { message: "비밀번호를 먼저 바꿔야 해요." });
+        }
+        // 관리 API로 자기 자신은 못 바꾼다 (내 비밀번호는 /change-password).
+        // 그래서 작업하는 owner 본인이 항상 남아 'owner 최소 1명'이 지켜진다
+        const targetId = (ctx.body as { userId?: unknown } | undefined)?.userId;
+        if (targetId !== undefined && String(targetId) === session.user.id) {
+          throw new APIError("FORBIDDEN", { message: "자기 계정은 여기서 바꿀 수 없어요." });
+        }
+      }),
       // 비밀번호 변경에 성공하면 '첫 로그인 비밀번호 변경' 표시를 끈다
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path !== "/change-password") return;

@@ -22,6 +22,9 @@ export default async function AdminHome() {
       <p className="text-sm text-gray-600">
         {user.email} · {ROLE_LABEL[user.role ?? ""] ?? user.role}
       </p>
+      {user.role === "owner" && (
+        <Link href="/admin/admins" className="block rounded border p-3 font-medium">관리자 관리 →</Link>
+      )}
       <div className="flex gap-4 text-sm">
         <Link href="/admin/password" className="text-blue-600">비밀번호 변경</Link>
         <form action={logout}>

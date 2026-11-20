@@ -29,3 +29,8 @@ export async function verifyPassword({ hash, password }: { hash: string; passwor
   for (let i = 0; i < Math.min(actual.length, want.length); i++) diff |= actual[i] ^ want[i];
   return diff === 0;
 }
+
+// 임시 비밀번호: 16자리 16진수(64비트 난수). 첫 로그인 때 바꾸게 한다
+export function generateTempPassword() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
