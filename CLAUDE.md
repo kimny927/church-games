@@ -96,7 +96,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/components/GameBrowser.tsx`: 목록 + 검색 + 필터 (클라이언트 컴포넌트)
 - `src/app/(site)/games/[id]/page.tsx`: 게임 상세 페이지
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
-- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`). 테마를 바꿀 때 여기부터 고친다
+- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`, `Toast`(잠깐 뜨는 알림), `AlertDialog`(확인 팝업)). 테마를 바꿀 때 여기부터 고친다
+- `src/components/GameInfo.tsx`: 게임 세부 정보 표. 사용자 상세 페이지와 관리자 심의 세부가 같이 쓴다
   - 폼 제출 버튼은 `SubmitButton` (서버 액션 폼이면 제출 중을 스스로 앎, 아니면 `pending` prop)
   - 화면 전환: 사용자 페이지는 `src/app/(site)/loading.tsx`(URL엔 `(site)`가 안 붙음), 관리자 화면은 링크에 `NavLink`. 관리자 쪽에 `loading.tsx`를 두면 응답을 먼저 보내서 `requireAdmin`의 redirect가 307이 아니게 되므로 두지 않는다
 
@@ -111,7 +112,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/app/api/auth/[...all]/route.ts`: Better Auth HTTP 엔드포인트
 - `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제)
 - `src/app/admin/admins/`: 관리자 관리 (owner 전용: 추가 시 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
-- `src/app/admin/moderation/`: 게임 심의 (owner·admin). 대기/승인/거절 탭, 승인·거절(사유 필수)·내리기·다시 승인·메모. 카드는 `src/components/admin/ModerationCard.tsx`
+- `src/app/admin/moderation/`: 게임 심의 (owner·admin). 목록(`page.tsx`)은 대기/승인/거절 탭과 항목만 보여 주고, 세부(`[id]/page.tsx`)에서 내용을 보고 승인·거절(사유 필수)·내리기·다시 승인·메모를 한다 (`src/components/admin/ReviewPanel.tsx`)
+  - 성공하면 원래 목록 탭으로 돌아가 '승인되었습니다/거절되었습니다' 알림(`?done=`), 실패하면 세부에 머물며 팝업
 - `src/app/admin/games/`: 게임 등록(`new/`)·수정(`[id]/edit/`) (owner·admin). 폼은 `src/components/admin/GameForm.tsx`, 값 확인은 `src/lib/game-form.ts`(선택지·길이를 서버에서 다시 확인)
   - 새 게임은 대기로 시작, id는 자동 생성(`g-` + 6자, 겹치면 다시 뽑음). 수정해도 상태·심의 기록은 그대로
   - 폼은 `<form action>` 대신 `onSubmit`으로 서버 액션을 부른다 (React 19가 action 폼을 제출 후 비워서 오류 때 입력이 사라짐)

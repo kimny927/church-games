@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import GameInfo from "@/components/GameInfo";
 import { getPublishedGame } from "@/lib/db";
 
 // 요청마다 DB에서 읽는다(SSR). 승인되지 않은 게임은 조회되지 않아 404가 된다.
@@ -9,16 +10,6 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const game = await getPublishedGame(id);
   if (!game) notFound();
-
-  const rows: [string, string | undefined][] = [
-    ["관련 말씀", game.verse],
-    ["게임 유형", game.gameTypes.join(", ")],
-    ["대상 나이", game.ages.join(", ")],
-    ["소요 시간", game.duration],
-    ["인원", game.groupSize],
-    ["예산", game.budget],
-    ["준비물", game.supplies],
-  ];
 
   return (
     <article>
@@ -31,14 +22,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
       </div>
       <p className="mt-4 leading-relaxed text-gray-800">{game.summary}</p>
 
-      <dl className="mt-6 grid grid-cols-[6rem_1fr] gap-y-2 text-sm">
-        {rows.filter(([, v]) => v).map(([k, v]) => (
-          <div key={k} className="contents">
-            <dt className="font-semibold text-gray-600">{k}</dt>
-            <dd>{v}</dd>
-          </div>
-        ))}
-      </dl>
+      <GameInfo game={game} className="mt-6" />
 
       <a
         href={game.link}

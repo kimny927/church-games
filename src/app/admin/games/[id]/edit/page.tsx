@@ -15,7 +15,7 @@ export default async function EditGamePage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="space-y-4">
-      <NavLink href={`/admin/moderation?status=${game.status}`} className="text-sm text-blue-600">← 게임 심의</NavLink>
+      <NavLink href={`/admin/moderation/${game.id}`} className="text-sm text-blue-600">← 심의 세부로</NavLink>
       <h1 className="text-xl font-bold">게임 수정</h1>
       <p className="text-sm text-gray-600">
         지금 상태: {REVIEW_STATUS_LABEL[game.status]}.

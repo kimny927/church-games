@@ -1,17 +1,21 @@
-import ModerationList from "@/components/admin/ModerationList";
 import NavLink from "@/components/ui/NavLink";
+import Toast from "@/components/ui/Toast";
 import { requireAdmin } from "@/lib/admin";
 import { countGamesByStatus, getGamesByStatus } from "@/lib/db";
+import { formatDateTime } from "@/lib/format";
 import { REVIEW_STATUS_LABEL, type ReviewStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const TABS: ReviewStatus[] = ["pending", "approved", "rejected"];
 
-export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  // 보기는 쿠키 캐시로 충분하다. 승인·거절은 actions.ts에서 DB로 다시 확인한다
+// 세부 페이지에서 승인·거절에 성공하면 ?done=approved|rejected 로 돌아온다
+const DONE_MESSAGE: Record<string, string> = { approved: "승인되었습니다.", rejected: "거절되었습니다." };
+
+// 심의 목록: 대상 게임을 보여 주기만 한다. 승인·거절은 세부 페이지(/admin/moderation/[id])에서
+export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ status?: string; done?: string }> }) {
   await requireAdmin();
-  const { status: param } = await searchParams;
+  const { status: param, done } = await searchParams;
   const status = TABS.find((t) => t === param) ?? "pending";
   const [games, counts] = await Promise.all([getGamesByStatus(status), countGamesByStatus()]);
 
@@ -31,7 +35,33 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
           </NavLink>
         ))}
       </nav>
-      <ModerationList games={games} emptyText={`${REVIEW_STATUS_LABEL[status]} 상태인 게임이 없어요.`} />
+
+      {games.length === 0 ? (
+        <p className="py-8 text-center text-sm text-gray-500">{REVIEW_STATUS_LABEL[status]} 상태인 게임이 없어요.</p>
+      ) : (
+        <ul className="divide-y rounded border">
+          {games.map((g) => (
+            <li key={g.id}>
+              <NavLink href={`/admin/moderation/${g.id}`} className="block p-3 hover:bg-gray-50">
+                <span className="block font-medium break-all">{g.name}</span>
+                <span className="block text-xs text-gray-500">
+                  {g.sourceType ?? "소스 없음"} · 등록 {formatDateTime(g.createdAt)}
+                  {g.creator && ` · ${g.creator}`}
+                  {g.autoScraped && " · 자동 수집"}
+                </span>
+                {status !== "pending" && (
+                  <span className="block text-xs text-gray-500">
+                    {REVIEW_STATUS_LABEL[status]}: {g.reviewer ?? "알 수 없음"}
+                    {g.reviewedAt && ` · ${formatDateTime(g.reviewedAt)}`}
+                  </span>
+                )}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Toast message={done ? DONE_MESSAGE[done] : undefined} clearParam="done" />
     </div>
   );
 }
