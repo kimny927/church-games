@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import NavLink from "@/components/ui/NavLink";
 import SubmitButton from "@/components/ui/SubmitButton";
 import { getAuth } from "@/lib/auth";
+import { countGamesByStatus } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +18,16 @@ async function logout() {
 
 export default async function AdminHome() {
   const { user } = await requireAdmin();
+  const { pending } = await countGamesByStatus();
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">관리자 홈</h1>
       <p className="text-sm text-gray-600">
         {user.email} · {ROLE_LABEL[user.role ?? ""] ?? user.role}
       </p>
+      <NavLink href="/admin/moderation" className="block rounded border p-3 font-medium">
+        게임 심의 →{pending > 0 && <span className="ml-2 rounded-full bg-red-600 px-2 text-sm text-white">대기 {pending}</span>}
+      </NavLink>
       {user.role === "owner" && (
         <NavLink href="/admin/admins" className="block rounded border p-3 font-medium">관리자 관리 →</NavLink>
       )}

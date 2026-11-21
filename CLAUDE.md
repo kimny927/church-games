@@ -106,18 +106,20 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - `hooks.before`: 관리 API(`/admin/*`)는 DB 기준 owner만, 비밀번호 변경 전이면 거절, 자기 자신 대상 거절 (그래서 owner가 항상 1명 이상 남는다)
   - `hooks.after`: 비밀번호 변경 성공 시 `mustChangePassword` 해제
 - `src/lib/password.ts`: PBKDF2 비밀번호 해시 (Workers CPU 절약)
-- `src/lib/admin.ts`: `requireAdmin({ role })`. 관리자 페이지·서버 액션 맨 앞에서 부른다. owner 전용 확인은 쿠키 캐시 대신 DB로
+- `src/lib/admin.ts`: `requireAdmin({ role, fresh })`. 관리자 페이지·서버 액션 맨 앞에서 부른다. owner 전용 확인과 `fresh: true`(심의처럼 기록이 남는 쓰기)는 쿠키 캐시 대신 DB로
 - `src/lib/auth-client.ts`, `src/components/admin/`: 로그인·비밀번호 변경 폼. 요청 제한은 `/api/auth/*` HTTP 경로에만 걸리므로 이 둘은 서버 액션에서 `auth.api`를 직접 부르지 않는다
 - `src/app/api/auth/[...all]/route.ts`: Better Auth HTTP 엔드포인트
 - `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제)
 - `src/app/admin/admins/`: 관리자 관리 (owner 전용: 추가 시 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
+- `src/app/admin/moderation/`: 게임 심의 (owner·admin). 대기/승인/거절 탭, 승인·거절(사유 필수)·내리기·다시 승인·메모. 카드는 `src/components/admin/ModerationCard.tsx`
+  - 심의자(`approved_by`)는 폼이 아니라 세션의 `user.id`. 상태 변경은 `db.ts`의 `reviewGame`이 '화면을 본 시점의 상태'일 때만 해서 동시 처리를 막는다
 - `neon/auth.sql`: Better Auth 테이블 (user, session, account, verification, rateLimit)
 - 서버에서 `auth.api.createUser` 등 관리 API를 부를 때는 반드시 `headers: await headers()`를 넘긴다. 헤더가 없으면 권한 확인을 건너뛴다 (첫 owner 생성 스크립트만 예외)
 
 아래는 아직 없는 파일이다. 만들 때 이 구조를 따른다.
 
-**관리자 페이지 (예정, 3주차):**
-  - `moderation/page.tsx`: 콘텐츠 심의 (대기 중 게임 검토, 승인/거절/수정)
+**관리자 페이지 (예정):**
+  - 게임 등록·수정 폼 (3주차 PR 4)
   - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
   - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
 
