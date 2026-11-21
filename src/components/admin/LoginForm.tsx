@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SubmitButton from "@/components/ui/SubmitButton";
 import { authClient } from "@/lib/auth-client";
 
 export default function LoginForm() {
@@ -30,9 +31,9 @@ export default function LoginForm() {
       {error && <p className="text-sm text-red-600">{error}</p>}
       <input name="email" type="email" required autoComplete="username" placeholder="이메일" className="w-full rounded border px-3 py-2" />
       <input name="password" type="password" required autoComplete="current-password" placeholder="비밀번호" className="w-full rounded border px-3 py-2" />
-      <button disabled={pending} className="w-full rounded bg-blue-600 py-2 font-semibold text-white disabled:opacity-50">
-        {pending ? "로그인 중…" : "로그인"}
-      </button>
+      <SubmitButton pending={pending} pendingText="로그인 중…" className="w-full rounded bg-blue-600 py-2 font-semibold text-white">
+        로그인
+      </SubmitButton>
     </form>
   );
 }

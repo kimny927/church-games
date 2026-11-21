@@ -5,7 +5,7 @@
 
 ## 지금 들어있는 것 (1주차 뼈대)
 - 게임 목록 + 검색(이름·말씀·태그) + 카테고리 필터 (`src/components/GameBrowser.tsx`)
-- 게임 상세 페이지 (`src/app/games/[id]/page.tsx`)
+- 게임 상세 페이지 (`src/app/(site)/games/[id]/page.tsx`)
 - 하단 신천지 금지 안내 (`src/components/Footer.tsx`)
 - Neon DB에서 승인된 게임만 읽어 표시 (`src/lib/db.ts`)
 - DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만, 샘플 링크는 예시 주소)

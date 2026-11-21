@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { removeAdmin, resetPassword, setRole } from "@/app/admin/admins/actions";
+import SubmitButton from "@/components/ui/SubmitButton";
 import ActionMessage from "./ActionMessage";
 
 type Props = { id: string; email: string; name: string; role: string; mustChangePassword: boolean; isMe: boolean };
@@ -40,15 +41,15 @@ export default function AdminRow({ id, email, name, role, mustChangePassword, is
               <option value="admin">관리자</option>
               <option value="owner">최고 관리자</option>
             </select>
-            <button disabled={pending} className="rounded border px-2 py-1">역할 저장</button>
+            <SubmitButton disabled={pending} className="rounded border px-2 py-1">역할 저장</SubmitButton>
           </form>
           <form action={resetAction} onSubmit={confirmSubmit(`${email}의 비밀번호를 초기화할까요?`)}>
             <input type="hidden" name="userId" value={id} />
-            <button disabled={pending} className="rounded border px-2 py-1">비밀번호 초기화</button>
+            <SubmitButton disabled={pending} className="rounded border px-2 py-1">비밀번호 초기화</SubmitButton>
           </form>
           <form action={removeAction} onSubmit={confirmSubmit(`${email} 계정을 삭제할까요? 되돌릴 수 없어요.`)}>
             <input type="hidden" name="userId" value={id} />
-            <button disabled={pending} className="rounded border border-red-300 px-2 py-1 text-red-600">삭제</button>
+            <SubmitButton disabled={pending} className="rounded border border-red-300 px-2 py-1 text-red-600">삭제</SubmitButton>
           </form>
         </div>
       )}

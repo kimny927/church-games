@@ -94,8 +94,11 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/lib/db.ts`: Neon 연결(HTTP 드라이버)과 게임 조회 함수. 서버에서만 import. 목록·상세 페이지가 요청마다 여기서 승인된 게임을 읽는다(SSR, `force-dynamic`)
 - `neon/schema.sql`, `neon/seed.sql`: DB 스키마와 샘플 데이터 (Neon 콘솔 SQL Editor에서 실행)
 - `src/components/GameBrowser.tsx`: 목록 + 검색 + 필터 (클라이언트 컴포넌트)
-- `src/app/games/[id]/page.tsx`: 게임 상세 페이지
+- `src/app/(site)/games/[id]/page.tsx`: 게임 상세 페이지
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
+- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`). 테마를 바꿀 때 여기부터 고친다
+  - 폼 제출 버튼은 `SubmitButton` (서버 액션 폼이면 제출 중을 스스로 앎, 아니면 `pending` prop)
+  - 화면 전환: 사용자 페이지는 `src/app/(site)/loading.tsx`(URL엔 `(site)`가 안 붙음), 관리자 화면은 링크에 `NavLink`. 관리자 쪽에 `loading.tsx`를 두면 응답을 먼저 보내서 `requireAdmin`의 redirect가 307이 아니게 되므로 두지 않는다
 
 **관리자 인증:**
 - `src/lib/auth.ts`: Better Auth 설정 (역할, 쿠키 캐시 5분, 요청 제한, hook). 서버에서만 import

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SubmitButton from "@/components/ui/SubmitButton";
 import { authClient } from "@/lib/auth-client";
 
 const MIN_LENGTH = 12; // src/lib/auth.ts 의 minPasswordLength 와 같게
@@ -41,9 +42,9 @@ export default function PasswordForm() {
       <input name="currentPassword" type="password" required autoComplete="current-password" placeholder="지금 비밀번호" className="w-full rounded border px-3 py-2" />
       <input name="newPassword" type="password" required minLength={MIN_LENGTH} autoComplete="new-password" placeholder={`새 비밀번호 (${MIN_LENGTH}자 이상)`} className="w-full rounded border px-3 py-2" />
       <input name="confirmPassword" type="password" required minLength={MIN_LENGTH} autoComplete="new-password" placeholder="새 비밀번호 확인" className="w-full rounded border px-3 py-2" />
-      <button disabled={pending} className="w-full rounded bg-blue-600 py-2 font-semibold text-white disabled:opacity-50">
-        {pending ? "바꾸는 중…" : "비밀번호 바꾸기"}
-      </button>
+      <SubmitButton pending={pending} pendingText="바꾸는 중…" className="w-full rounded bg-blue-600 py-2 font-semibold text-white">
+        비밀번호 바꾸기
+      </SubmitButton>
     </form>
   );
 }

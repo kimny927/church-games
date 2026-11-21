@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin";
+import NavLink from "@/components/ui/NavLink";
+import SubmitButton from "@/components/ui/SubmitButton";
 import { getAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +24,12 @@ export default async function AdminHome() {
         {user.email} · {ROLE_LABEL[user.role ?? ""] ?? user.role}
       </p>
       {user.role === "owner" && (
-        <Link href="/admin/admins" className="block rounded border p-3 font-medium">관리자 관리 →</Link>
+        <NavLink href="/admin/admins" className="block rounded border p-3 font-medium">관리자 관리 →</NavLink>
       )}
       <div className="flex gap-4 text-sm">
-        <Link href="/admin/password" className="text-blue-600">비밀번호 변경</Link>
+        <NavLink href="/admin/password" className="text-blue-600">비밀번호 변경</NavLink>
         <form action={logout}>
-          <button className="text-blue-600">로그아웃</button>
+          <SubmitButton pendingText="로그아웃 중…" className="text-blue-600">로그아웃</SubmitButton>
         </form>
       </div>
     </div>
