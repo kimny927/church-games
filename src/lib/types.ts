@@ -45,8 +45,10 @@ export const REVIEW_STATUS_LABEL: Record<ReviewStatus, string> = {
 export type ModerationGame = Game & {
   status: ReviewStatus;
   autoScraped: boolean;
-  creator?: string; // 등록한 관리자 이메일
-  reviewer?: string; // 심의한 관리자 이메일 (계정이 없으면 approved_by 원래 값)
+  creator?: string; // 등록한 관리자 닉네임
+  creatorEmail?: string;
+  reviewer?: string; // 심의한 관리자 닉네임 (계정이 없으면 approved_by 원래 값)
+  reviewerEmail?: string;
   reviewedAt?: Date;
   rejectionReason?: string;
   adminNotes?: string;

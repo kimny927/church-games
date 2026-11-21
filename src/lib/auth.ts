@@ -1,12 +1,14 @@
 // Better Auth 설정. 관리자 계정(이메일+비밀번호)만 쓴다. 서버에서만 import.
 import { neon } from "@neondatabase/serverless";
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx, isAPIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx, getSessionFromCtx, isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements } from "better-auth/plugins/admin/access";
 import { NeonDialect } from "kysely-neon";
+import { isNicknameTaken } from "./db";
+import { NICKNAME_TAKEN, parseNickname } from "./nickname";
 import { hashPassword, verifyPassword } from "./password";
 
 // 역할: owner(최고 관리자) = 관리자 계정 관리, admin(관리자) = 계정 관리 권한 없음
@@ -20,6 +22,61 @@ const roles = {
   admin: ac.newRole({ user: [], session: [] }),
 };
 export type AdminRole = keyof typeof roles;
+
+type HookCtx = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
+
+// 관리 API(/admin/*) 공통 규칙. 통과하면 true, 로그인이 안 됐으면 false(플러그인이 401로 거절)
+async function checkAdminApi(ctx: HookCtx): Promise<boolean> {
+  // 헤더 없는 서버 호출(첫 owner 생성 스크립트)은 권한 확인 자체가 없다
+  if (!ctx.headers) return true;
+  // 쿠키 캐시가 아니라 DB의 최신 역할·상태로 판단한다 (역할 변경·초기화가 바로 반영되게)
+  const session = await getAuthoritativeSessionFromCtx(ctx);
+  if (!session) return false;
+  // 플러그인의 역할 확인은 쿠키 캐시 값을 쓸 수 있어, 역할을 내린 직후에도 막히도록 DB 값으로 한 번 더 본다
+  if (session.user.role !== "owner") {
+    throw new APIError("FORBIDDEN", { message: "최고 관리자만 할 수 있어요." });
+  }
+  if (session.user.mustChangePassword) {
+    throw new APIError("FORBIDDEN", { message: "비밀번호를 먼저 바꿔야 해요." });
+  }
+  // 관리 API로 자기 자신은 못 바꾼다 (내 비밀번호는 /change-password).
+  // 그래서 작업하는 owner 본인이 항상 남아 'owner 최소 1명'이 지켜진다
+  const targetId = (ctx.body as { userId?: unknown } | undefined)?.userId;
+  if (targetId !== undefined && String(targetId) === session.user.id) {
+    throw new APIError("FORBIDDEN", { message: "자기 계정은 여기서 바꿀 수 없어요." });
+  }
+  return true;
+}
+
+// 닉네임(user.name)을 정하거나 바꾸는 모든 경로에서 규칙과 중복을 확인한다.
+// 서버 액션에서만 확인하면 /api/auth/update-user 를 직접 불러 다른 관리자와 같은 닉네임을 쓸 수 있다
+async function checkNickname(ctx: HookCtx) {
+  const body = (ctx.body ?? {}) as { name?: unknown; userId?: unknown; data?: { name?: unknown } };
+  let name: unknown;
+  let exceptUserId: string | undefined;
+  if (ctx.path === "/update-user") {
+    // 본인 정보 수정: 나를 빼고 비교. 로그인이 안 됐으면 Better Auth가 401로 거절하니 여기선 보지 않는다
+    const session = await getSessionFromCtx(ctx);
+    if (!session) return;
+    name = body.name;
+    exceptUserId = session.user.id;
+  } else if (ctx.path === "/admin/create-user") {
+    name = body.name;
+  } else if (ctx.path === "/admin/update-user") {
+    name = body.data?.name;
+    exceptUserId = body.userId === undefined ? undefined : String(body.userId);
+  } else {
+    return;
+  }
+  if (name === undefined) return;
+
+  const parsed = parseNickname(String(name));
+  // 앞뒤 공백·연속 공백이 있으면 겹침 판단이 흐려지므로 정리된 값만 받는다 (화면의 폼은 정리해서 보낸다)
+  if (!parsed.ok || parsed.name !== name) {
+    throw new APIError("BAD_REQUEST", { message: parsed.ok ? "닉네임 앞뒤나 가운데의 여러 칸 공백을 지워 주세요." : parsed.message });
+  }
+  if (await isNicknameTaken(parsed.name, exceptUserId)) throw new APIError("BAD_REQUEST", { message: NICKNAME_TAKEN });
+}
 
 function createAuth() {
   const url = process.env.DATABASE_URL;
@@ -60,27 +117,11 @@ function createAuth() {
       },
     },
     hooks: {
-      // 관리 API(/admin/*) 공통 규칙. 서버 액션·HTTP 직접 호출 모두 여기를 지난다
+      // 관리 API(/admin/*) 공통 규칙과 닉네임 규칙. 서버 액션·HTTP 직접 호출 모두 여기를 지난다
+      // 권한을 먼저 보고 나서 닉네임을 본다 (권한 없는 사람이 '이미 쓰는 닉네임'인지 알아내지 못하게)
       before: createAuthMiddleware(async (ctx) => {
-        if (!ctx.path.startsWith("/admin/")) return;
-        // 헤더 없는 서버 호출(첫 owner 생성 스크립트)은 권한 확인 자체가 없다
-        if (!ctx.headers) return;
-        // 쿠키 캐시가 아니라 DB의 최신 역할·상태로 판단한다 (역할 변경·초기화가 바로 반영되게)
-        const session = await getAuthoritativeSessionFromCtx(ctx);
-        if (!session) return; // 플러그인이 401로 거절
-        // 플러그인의 역할 확인은 쿠키 캐시 값을 쓸 수 있어, 역할을 내린 직후에도 막히도록 DB 값으로 한 번 더 본다
-        if (session.user.role !== "owner") {
-          throw new APIError("FORBIDDEN", { message: "최고 관리자만 할 수 있어요." });
-        }
-        if (session.user.mustChangePassword) {
-          throw new APIError("FORBIDDEN", { message: "비밀번호를 먼저 바꿔야 해요." });
-        }
-        // 관리 API로 자기 자신은 못 바꾼다 (내 비밀번호는 /change-password).
-        // 그래서 작업하는 owner 본인이 항상 남아 'owner 최소 1명'이 지켜진다
-        const targetId = (ctx.body as { userId?: unknown } | undefined)?.userId;
-        if (targetId !== undefined && String(targetId) === session.user.id) {
-          throw new APIError("FORBIDDEN", { message: "자기 계정은 여기서 바꿀 수 없어요." });
-        }
+        if (ctx.path.startsWith("/admin/") && !(await checkAdminApi(ctx))) return;
+        await checkNickname(ctx);
       }),
       // 비밀번호 변경에 성공하면 '첫 로그인 비밀번호 변경' 표시를 끈다
       after: createAuthMiddleware(async (ctx) => {

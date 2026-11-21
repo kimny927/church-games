@@ -52,8 +52,11 @@ function toModerationGame(row: Record<string, unknown>): ModerationGame {
     ...toGame(row),
     status: row.status as ReviewStatus,
     autoScraped: row.auto_scraped as boolean,
-    creator: ((row.creator_email ?? row.created_by) as string) ?? undefined,
-    reviewer: ((row.reviewer_email ?? row.approved_by) as string) ?? undefined,
+    // 닉네임으로 보여 준다. 계정이 없으면(예: seed) 칼럼의 원래 값
+    creator: ((row.creator_name ?? row.created_by) as string) ?? undefined,
+    creatorEmail: (row.creator_email as string) ?? undefined,
+    reviewer: ((row.reviewer_name ?? row.approved_by) as string) ?? undefined,
+    reviewerEmail: (row.reviewer_email as string) ?? undefined,
     reviewedAt: (row.approved_at as Date) ?? undefined,
     rejectionReason: (row.rejection_reason as string) ?? undefined,
     adminNotes: (row.admin_notes as string) ?? undefined,
@@ -64,7 +67,7 @@ function toModerationGame(row: Record<string, unknown>): ModerationGame {
 // 대기는 먼저 들어온 것부터, 처리된 것은 최근 처리한 것부터
 export async function getGamesByStatus(status: ReviewStatus): Promise<ModerationGame[]> {
   const rows = await sql()`
-    select g.*, r.email as reviewer_email, c.email as creator_email
+    select g.*, r.name as reviewer_name, r.email as reviewer_email, c.name as creator_name, c.email as creator_email
     from games g
       left join "user" r on r.id = g.approved_by
       left join "user" c on c.id = g.created_by
@@ -78,7 +81,7 @@ export async function getGamesByStatus(status: ReviewStatus): Promise<Moderation
 // 수정 화면용: 상태와 상관없이 1개
 export async function getGameForAdmin(id: string): Promise<ModerationGame | undefined> {
   const rows = await sql()`
-    select g.*, r.email as reviewer_email, c.email as creator_email
+    select g.*, r.name as reviewer_name, r.email as reviewer_email, c.name as creator_name, c.email as creator_email
     from games g
       left join "user" r on r.id = g.approved_by
       left join "user" c on c.id = g.created_by
@@ -157,4 +160,15 @@ export async function updateGame(id: string, input: GameInput): Promise<ReviewSt
     where id = ${id}
     returning status`;
   return rows[0]?.status as ReviewStatus | undefined;
+}
+
+// ── 관리자 닉네임 (Better Auth의 user.name) ──
+
+// 대소문자·앞뒤 공백을 무시하고 겹치는지 본다. 내 닉네임을 그대로 저장할 때는 exceptUserId로 나를 뺀다
+export async function isNicknameTaken(name: string, exceptUserId?: string): Promise<boolean> {
+  const rows = await sql()`
+    select 1 from "user"
+    where lower(trim(name)) = lower(${name}) and id <> ${exceptUserId ?? ""}
+    limit 1`;
+  return rows.length > 0;
 }

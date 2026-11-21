@@ -85,7 +85,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run deploy`: 수동 배포 (평소에는 main 병합 시 자동 배포)
 - `npm run db:check`: Neon 연결 확인 (`.env.local`의 `DATABASE_URL` 사용, 상태별 게임 개수 출력)
 - `npx tsx --env-file=.env.local scripts/auth-sql.mts > neon/auth.sql`: Better Auth 테이블 SQL 생성 (DB는 읽기만, Better Auth 업그레이드 후 다시 실행)
-- `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일>`: 첫 최고 관리자 생성, 임시 비밀번호 출력
+- `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일> [닉네임]`: 첫 최고 관리자 생성, 임시 비밀번호 출력 (닉네임을 빼면 이메일 앞부분)
 - `scripts/test-admin-auth.sh`: 관리자 인증·권한 시나리오 테스트. `npm run preview`를 띄운 뒤 실행 (`@test.local` 테스트 계정을 만들고 끝나면 지움). 인증·권한을 바꾼 PR마다 돌린다
 
 ## 코드 구조
@@ -105,13 +105,15 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/lib/auth.ts`: Better Auth 설정 (역할, 쿠키 캐시 5분, 요청 제한, hook). 서버에서만 import
   - 역할 권한: owner에게도 impersonate·ban·이메일 변경은 없다 (승인자 기록을 믿을 수 있게)
   - `hooks.before`: 관리 API(`/admin/*`)는 DB 기준 owner만, 비밀번호 변경 전이면 거절, 자기 자신 대상 거절 (그래서 owner가 항상 1명 이상 남는다)
+  - `hooks.before`: 닉네임(`user.name`)을 정하거나 바꾸는 경로(`/update-user`, `/admin/create-user`, `/admin/update-user`)는 규칙(2~20자)·중복(대소문자 무시)을 확인한다. 서버 액션만 확인하면 API 직접 호출로 건너뛸 수 있어서. 권한 확인을 먼저 한다
   - `hooks.after`: 비밀번호 변경 성공 시 `mustChangePassword` 해제
 - `src/lib/password.ts`: PBKDF2 비밀번호 해시 (Workers CPU 절약)
 - `src/lib/admin.ts`: `requireAdmin({ role, fresh })`. 관리자 페이지·서버 액션 맨 앞에서 부른다. owner 전용 확인과 `fresh: true`(심의처럼 기록이 남는 쓰기)는 쿠키 캐시 대신 DB로
 - `src/lib/auth-client.ts`, `src/components/admin/`: 로그인·비밀번호 변경 폼. 요청 제한은 `/api/auth/*` HTTP 경로에만 걸리므로 이 둘은 서버 액션에서 `auth.api`를 직접 부르지 않는다
 - `src/app/api/auth/[...all]/route.ts`: Better Auth HTTP 엔드포인트
-- `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제)
-- `src/app/admin/admins/`: 관리자 관리 (owner 전용: 추가 시 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
+- `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제), `profile/`(내 정보: 닉네임 변경)
+- 관리자 닉네임: Better Auth의 `user.name`을 쓴다 (DB 변경 없음). 규칙은 `src/lib/nickname.ts`, 중복 확인은 `db.ts`의 `isNicknameTaken`. 심의 기록·관리자 목록에 이메일 대신 닉네임을 보여 준다
+- `src/app/admin/admins/`: 관리자 관리 (owner 전용: 이메일·닉네임·역할로 추가, 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
 - `src/app/admin/moderation/`: 게임 심의 (owner·admin). 목록(`page.tsx`)은 대기/승인/거절 탭과 항목만 보여 주고, 세부(`[id]/page.tsx`)에서 내용을 보고 승인·거절(사유 필수)·내리기·다시 승인·메모를 한다 (`src/components/admin/ReviewPanel.tsx`)
   - 성공하면 원래 목록 탭으로 돌아가 '승인되었습니다/거절되었습니다' 알림(`?done=`), 실패하면 세부에 머물며 팝업
 - `src/app/admin/games/`: 게임 등록(`new/`)·수정(`[id]/edit/`) (owner·admin). 폼은 `src/components/admin/GameForm.tsx`, 값 확인은 `src/lib/game-form.ts`(선택지·길이를 서버에서 다시 확인)

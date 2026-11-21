@@ -43,7 +43,16 @@ ids=$(cat "$D/body")
 uid_of() { jq -r ".users[] | select(.email==\"test-$1@test.local\") | .id" <<<"$ids"; }
 ME=$(uid_of owner); ADMIN=$(uid_of admin); OWNER2=$(uid_of owner2)
 chk "/admin/admins 열림" "$(page o /admin/admins)" 200
-chk "owner의 create-user 허용" "$(post o /admin/create-user '{"email":"test-created@test.local","password":"aaaaaaaaaaaa","name":"c","role":"admin"}')" 200
+chk "owner의 create-user 허용" "$(post o /admin/create-user '{"email":"test-created@test.local","password":"aaaaaaaaaaaa","name":"test-created","role":"admin"}')" 200
+
+echo "--- 닉네임 (auth.ts checkNickname: 화면을 거치지 않고 API를 직접 불러도 규칙·중복 확인)"
+chk "겹치는 닉네임으로 관리자 생성 거절" "$(post o /admin/create-user '{"email":"test-dup@test.local","password":"aaaaaaaaaaaa","name":"test-admin","role":"admin"}')" 400
+chk "1자 닉네임으로 관리자 생성 거절" "$(post o /admin/create-user '{"email":"test-dup@test.local","password":"aaaaaaaaaaaa","name":"d","role":"admin"}')" 400
+chk "다른 관리자 닉네임을 겹치게 수정 거절" "$(target o /admin/update-user "$ADMIN" ',"data":{"name":"test-owner"}')" 400
+chk "내 닉네임을 남과 겹치게(대소문자만 다르게) 거절" "$(post a /update-user '{"name":"TEST-OWNER"}')" 400
+chk "앞뒤 공백 닉네임 거절" "$(post a /update-user '{"name":"  test-new  "}')" 400
+chk "내 역할을 스스로 owner로 거절" "$(post a /update-user '{"role":"owner"}')" 400
+chk "내 닉네임 변경 허용" "$(post a /update-user '{"name":"test-admin-new"}')" 200
 
 echo "--- 자기 보호 (owner 최소 1명)"
 chk "자기 역할 변경 거절 (set-role)" "$(target o /admin/set-role "$ME" ',"role":"admin"')" 403
@@ -56,7 +65,9 @@ echo "--- 초기화·역할 변경 즉시 반영"
 chk "초기화: 비밀번호 설정" "$(target o /admin/set-user-password "$ADMIN" ',"newPassword":"temp-password-reset"')" 200
 chk "초기화: 변경 필요 표시" "$(target o /admin/update-user "$ADMIN" ',"data":{"mustChangePassword":true}')" 200
 chk "초기화: 세션 해제" "$(target o /admin/revoke-user-sessions "$ADMIN")" 200
-chk "초기화된 admin의 기존 세션 끊김" "$(page a /admin)" "307 $B/admin/login"
+# 페이지 보기는 쿠키 캐시(5분)라 바로 막히지 않을 수 있다 (docs/decisions.md 2026-11-21에서 받아들인 대가).
+# 그래서 DB 기준으로 세션이 지워졌는지를 본다. 쓰기 작업(requireAdmin fresh)·관리 API는 DB 기준이라 바로 막힌다
+chk "초기화된 admin의 기존 세션 끊김 (DB 기준)" "$(get a "/get-session?disableCookieCache=true") $(cat "$D/body")" "200 null"
 chk "새 임시 비밀번호로 로그인" "$(login a3 admin temp-password-reset)" 200
 chk "→ 다시 비밀번호 변경 강제" "$(page a3 /admin)" "307 $B/admin/password"
 chk "owner2 로그인" "$(login o2 owner2 temp-password-owner2)" 200

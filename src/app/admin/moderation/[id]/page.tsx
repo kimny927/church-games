@@ -9,6 +9,16 @@ import { REVIEW_STATUS_LABEL } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+// 닉네임으로 보여 주고, 정확히 누구인지 확인할 수 있게 이메일을 작게 붙인다
+function Person({ name, email }: { name: string; email?: string }) {
+  return (
+    <>
+      {name}
+      {email && <span className="text-xs text-gray-400"> ({email})</span>}
+    </>
+  );
+}
+
 // 심의 세부: 게임 한 개의 내용을 모두 보고 승인·거절한다 (목록은 보여 주기만)
 export default async function ModerationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // 보기는 쿠키 캐시로 충분하다. 승인·거절은 actions.ts에서 DB로 다시 확인한다
@@ -31,7 +41,7 @@ export default async function ModerationDetailPage({ params }: { params: Promise
         <p className="text-sm text-gray-600">
           <span className="rounded bg-gray-100 px-2 py-0.5">{REVIEW_STATUS_LABEL[game.status]}</span>
           {" "}{game.sourceType ?? "소스 없음"} · 등록 {formatDateTime(game.createdAt)}
-          {game.creator && ` · ${game.creator}`}
+          {game.creator && <> · <Person name={game.creator} email={game.creatorEmail} /></>}
           {game.autoScraped && <span className="ml-1 text-amber-700">· 자동 수집</span>}
         </p>
         {game.link && (
@@ -49,7 +59,7 @@ export default async function ModerationDetailPage({ params }: { params: Promise
       {game.status !== "pending" && (
         <div className="rounded bg-gray-50 p-3 text-sm text-gray-700">
           <p>
-            {REVIEW_STATUS_LABEL[game.status]}: {game.reviewer ?? "알 수 없음"}
+            {REVIEW_STATUS_LABEL[game.status]}: {game.reviewer ? <Person name={game.reviewer} email={game.reviewerEmail} /> : "알 수 없음"}
             {game.reviewedAt && ` · ${formatDateTime(game.reviewedAt)}`}
           </p>
           {game.rejectionReason && <p className="mt-1">사유: {game.rejectionReason}</p>}

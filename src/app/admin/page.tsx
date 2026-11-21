@@ -23,7 +23,8 @@ export default async function AdminHome() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">관리자 홈</h1>
       <p className="text-sm text-gray-600">
-        {user.email} · {ROLE_LABEL[user.role ?? ""] ?? user.role}
+        {user.name} · {ROLE_LABEL[user.role ?? ""] ?? user.role}
+        <span className="block text-xs text-gray-400">{user.email}</span>
       </p>
       <NavLink href="/admin/games/new" className="block rounded border p-3 font-medium">게임 등록 +</NavLink>
       <NavLink href="/admin/moderation" className="block rounded border p-3 font-medium">
@@ -33,6 +34,7 @@ export default async function AdminHome() {
         <NavLink href="/admin/admins" className="block rounded border p-3 font-medium">관리자 관리 →</NavLink>
       )}
       <div className="flex gap-4 text-sm">
+        <NavLink href="/admin/profile" className="text-blue-600">내 정보</NavLink>
         <NavLink href="/admin/password" className="text-blue-600">비밀번호 변경</NavLink>
         <form action={logout}>
           <SubmitButton pendingText="로그아웃 중…" className="text-blue-600">로그아웃</SubmitButton>
