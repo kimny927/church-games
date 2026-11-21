@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { isAPIError } from "better-auth/api";
+import { APIError, isAPIError } from "better-auth/api";
 import { requireAdmin } from "@/lib/admin";
 import { getAuth, type AdminRole } from "@/lib/auth";
+import { isNicknameTaken } from "@/lib/db";
+import { NICKNAME_TAKEN, parseNickname } from "@/lib/nickname";
 import { generateTempPassword } from "@/lib/password";
 
 export type ActionState = { ok: boolean; message: string; tempPassword?: string } | null;
@@ -26,8 +28,12 @@ const toRole = (v: FormDataEntryValue | null): AdminRole => (v === "owner" ? "ow
 
 export async function addAdmin(_: ActionState, form: FormData): Promise<ActionState> {
   const email = String(form.get("email")).trim().toLowerCase();
-  const name = String(form.get("name")).trim() || email.split("@")[0];
+  const nickname = parseNickname(form.get("name"));
+  if (!nickname.ok) return { ok: false, message: nickname.message };
+  const { name } = nickname;
   return run(async () => {
+    // run이 APIError를 실패 메시지로 바꿔 준다 (Better Auth 오류와 같은 길로)
+    if (await isNicknameTaken(name)) throw new APIError("BAD_REQUEST", { message: NICKNAME_TAKEN });
     const tempPassword = generateTempPassword();
     await getAuth().api.createUser({
       body: { email, name, password: tempPassword, role: toRole(form.get("role")), data: { mustChangePassword: true } },
