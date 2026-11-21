@@ -109,7 +109,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - `hooks.after`: 비밀번호 변경 성공 시 `mustChangePassword` 해제
 - `src/lib/password.ts`: PBKDF2 비밀번호 해시 (Workers CPU 절약)
 - `src/lib/admin.ts`: `requireAdmin({ role, fresh })`. 관리자 페이지·서버 액션 맨 앞에서 부른다. owner 전용 확인과 `fresh: true`(심의처럼 기록이 남는 쓰기)는 쿠키 캐시 대신 DB로
-- `src/lib/auth-client.ts`, `src/components/admin/`: 로그인·비밀번호 변경 폼. 요청 제한은 `/api/auth/*` HTTP 경로에만 걸리므로 이 둘은 서버 액션에서 `auth.api`를 직접 부르지 않는다
+- `src/lib/auth-client.ts`, `src/components/admin/LoginForm.tsx`·`PasswordForm.tsx`: 로그인·비밀번호 변경 폼. 요청 제한은 `/api/auth/*` HTTP 경로에만 걸리므로 이 둘은 서버 액션에서 `auth.api`를 직접 부르지 않는다
 - `src/app/api/auth/[...all]/route.ts`: Better Auth HTTP 엔드포인트
 - `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제), `profile/`(내 정보: 닉네임 변경)
 - 관리자 닉네임: Better Auth의 `user.name`을 쓴다 (DB 변경 없음). 규칙은 `src/lib/nickname.ts`, 중복 확인은 `db.ts`의 `isNicknameTaken`. 심의 기록·관리자 목록에 이메일 대신 닉네임을 보여 준다

@@ -10,7 +10,7 @@
 - Neon DB에서 승인된 게임만 읽어 표시 (`src/lib/db.ts`)
 - DB 스키마와 샘플 데이터 (`neon/schema.sql`, `neon/seed.sql`, 지금은 games 테이블만, 샘플 링크는 예시 주소)
 - Cloudflare Workers 자동 배포 (main 병합 시 운영, 다른 브랜치는 미리보기)
-- 관리자 로그인·계정 관리 (`/admin`, Better Auth, 최고 관리자/관리자)
+- 관리자 로그인·계정 관리 (`/admin`, Better Auth, 최고 관리자/관리자, 닉네임)
 - 게임 심의 (`/admin/moderation`, 대기·승인·거절, 승인자 기록)
 - 게임 등록·수정 (`/admin/games`, 등록하면 심의 대기로)
 - 버튼·화면 전환 로딩 표시 (`src/components/ui/`)
