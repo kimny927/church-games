@@ -25,6 +25,7 @@ export default async function AdminHome() {
       <p className="text-sm text-gray-600">
         {user.email} · {ROLE_LABEL[user.role ?? ""] ?? user.role}
       </p>
+      <NavLink href="/admin/games/new" className="block rounded border p-3 font-medium">게임 등록 +</NavLink>
       <NavLink href="/admin/moderation" className="block rounded border p-3 font-medium">
         게임 심의 →{pending > 0 && <span className="ml-2 rounded-full bg-red-600 px-2 text-sm text-white">대기 {pending}</span>}
       </NavLink>

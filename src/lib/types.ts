@@ -1,5 +1,7 @@
 // 게임 한 개의 정보. 노션 게임 데이터베이스의 항목과 같은 구조예요.
-export type SourceType = "블로그" | "유튜브" | "인스타그램" | "기타";
+// 값을 바꾸면 neon/schema.sql 의 source_type 제약도 같이 바꾼다
+export const SOURCE_TYPES = ["블로그", "유튜브", "인스타그램", "기타"] as const;
+export type SourceType = (typeof SOURCE_TYPES)[number];
 
 // 나중에 자체 판매(2단계), 사용자 판매(3단계) 게임도 같은 목록에 넣기 위한 구분
 export type GameKind = "외부 링크" | "자체 판매" | "사용자 판매";
@@ -43,9 +45,13 @@ export const REVIEW_STATUS_LABEL: Record<ReviewStatus, string> = {
 export type ModerationGame = Game & {
   status: ReviewStatus;
   autoScraped: boolean;
+  creator?: string; // 등록한 관리자 이메일
   reviewer?: string; // 심의한 관리자 이메일 (계정이 없으면 approved_by 원래 값)
   reviewedAt?: Date;
   rejectionReason?: string;
   adminNotes?: string;
   createdAt: Date;
 };
+
+// 관리자 등록·수정 폼에서 받는 값. id(자동 생성)와 kind(지금은 '외부 링크' 고정)는 서버가 정한다
+export type GameInput = Omit<Game, "id" | "kind">;

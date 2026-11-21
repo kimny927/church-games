@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { approveGame, rejectGame, saveNotes } from "@/app/admin/moderation/actions";
+import NavLink from "@/components/ui/NavLink";
 import SubmitButton from "@/components/ui/SubmitButton";
 import type { ModerationGame } from "@/lib/types";
 import ActionMessage from "./ActionMessage";
@@ -41,9 +42,13 @@ export default function ModerationCard({ game, onResult }: { game: ModerationGam
   return (
     <li className="space-y-3 rounded border p-3">
       <div className="space-y-1">
-        <p className="font-medium break-all">{game.name}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-medium break-all">{game.name}</p>
+          <NavLink href={`/admin/games/${game.id}/edit`} className="shrink-0 text-sm text-blue-600">수정</NavLink>
+        </div>
         <p className="text-sm text-gray-600">
           {game.sourceType ?? "소스 없음"} · 등록 {formatDate(game.createdAt)}
+          {game.creator && ` · ${game.creator}`}
           {game.autoScraped && <span className="ml-1 text-amber-700">· 자동 수집</span>}
         </p>
         {game.link && (
