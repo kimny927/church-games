@@ -1,5 +1,5 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
-import type { Game, ModerationGame, ReviewStatus } from "./types";
+import type { Game, GameInput, ModerationGame, ReviewStatus } from "./types";
 
 // Neon HTTP 드라이버: 요청마다 HTTP로 쿼리해서 Cloudflare Workers처럼 연결을 오래 못 잡는 환경에 맞아요.
 // DATABASE_URL 은 서버에서만 읽어요. 브라우저 코드에서 이 파일을 import 하지 마세요.
@@ -52,6 +52,7 @@ function toModerationGame(row: Record<string, unknown>): ModerationGame {
     ...toGame(row),
     status: row.status as ReviewStatus,
     autoScraped: row.auto_scraped as boolean,
+    creator: ((row.creator_email ?? row.created_by) as string) ?? undefined,
     reviewer: ((row.reviewer_email ?? row.approved_by) as string) ?? undefined,
     reviewedAt: (row.approved_at as Date) ?? undefined,
     rejectionReason: (row.rejection_reason as string) ?? undefined,
@@ -63,13 +64,26 @@ function toModerationGame(row: Record<string, unknown>): ModerationGame {
 // 대기는 먼저 들어온 것부터, 처리된 것은 최근 처리한 것부터
 export async function getGamesByStatus(status: ReviewStatus): Promise<ModerationGame[]> {
   const rows = await sql()`
-    select g.*, u.email as reviewer_email
-    from games g left join "user" u on u.id = g.approved_by
+    select g.*, r.email as reviewer_email, c.email as creator_email
+    from games g
+      left join "user" r on r.id = g.approved_by
+      left join "user" c on c.id = g.created_by
     where g.status = ${status}
     order by
       case when ${status} = 'pending' then g.created_at end asc,
       g.approved_at desc nulls last, g.created_at desc`;
   return rows.map(toModerationGame);
+}
+
+// 수정 화면용: 상태와 상관없이 1개
+export async function getGameForAdmin(id: string): Promise<ModerationGame | undefined> {
+  const rows = await sql()`
+    select g.*, r.email as reviewer_email, c.email as creator_email
+    from games g
+      left join "user" r on r.id = g.approved_by
+      left join "user" c on c.id = g.created_by
+    where g.id = ${id}`;
+  return rows[0] ? toModerationGame(rows[0]) : undefined;
 }
 
 export async function countGamesByStatus(): Promise<Record<ReviewStatus, number>> {
@@ -101,4 +115,46 @@ export async function reviewGame(args: {
 export async function updateAdminNotes(id: string, notes: string | null): Promise<boolean> {
   const rows = await sql()`update games set admin_notes = ${notes} where id = ${id} returning id`;
   return rows.length > 0;
+}
+
+// ── 관리자 등록·수정 ──
+
+// 주소에 쓰는 id. 헷갈리는 글자(0·o, 1·l)는 뺀다. 등록 후에는 바꾸지 않는다 (링크가 깨지지 않게)
+const ID_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
+function newGameId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return "g-" + Array.from(bytes, (b) => ID_CHARS[b % ID_CHARS.length]).join("");
+}
+
+// 새 게임은 대기(pending, DB 기본값)로 시작해 심의 화면에서 승인해야 공개된다
+export async function createGame(input: GameInput, createdBy: string): Promise<{ id: string; status: ReviewStatus }> {
+  const g = input;
+  // id는 기본 키라 겹치면 DB가 거부한다(23505). 그때는 새 id로 다시 시도해서 같은 주소가 두 개 생기지 않는다
+  // (32^6 ≈ 10억 가지라 겹치는 일 자체가 드물다)
+  for (let attempt = 0; ; attempt++) {
+    const id = newGameId();
+    try {
+      await sql()`
+        insert into games (id, name, summary, link, source_type, tags, verse, game_types, budget, ages, duration, group_size, supplies, created_by)
+        values (${id}, ${g.name}, ${g.summary}, ${g.link}, ${g.sourceType}, ${g.tags}, ${g.verse ?? null}, ${g.gameTypes},
+                ${g.budget}, ${g.ages}, ${g.duration}, ${g.groupSize}, ${g.supplies ?? null}, ${createdBy})`;
+      return { id, status: "pending" };
+    } catch (e) {
+      const uniqueViolation = (e as { code?: string }).code === "23505";
+      if (!uniqueViolation || attempt >= 2) throw e;
+    }
+  }
+}
+
+// 내용만 고친다. 상태·심의 기록은 그대로 (승인된 게임은 바로 반영). 고친 시각은 updated_at 트리거가 남긴다
+export async function updateGame(id: string, input: GameInput): Promise<ReviewStatus | undefined> {
+  const g = input;
+  const rows = await sql()`
+    update games
+    set name = ${g.name}, summary = ${g.summary}, link = ${g.link}, source_type = ${g.sourceType}, tags = ${g.tags},
+        verse = ${g.verse ?? null}, game_types = ${g.gameTypes}, budget = ${g.budget}, ages = ${g.ages},
+        duration = ${g.duration}, group_size = ${g.groupSize}, supplies = ${g.supplies ?? null}
+    where id = ${id}
+    returning status`;
+  return rows[0]?.status as ReviewStatus | undefined;
 }

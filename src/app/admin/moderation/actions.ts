@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { requireAdmin } from "@/lib/admin";
 import { reviewGame, updateAdminNotes } from "@/lib/db";
@@ -18,6 +19,7 @@ const ALLOWED_FROM: Record<"approved" | "rejected", ReviewStatus[]> = {
 const ALREADY_DONE = "다른 관리자가 먼저 처리했어요. 화면을 새로 고쳐 확인해 주세요.";
 
 // 승인·거절: 심의자는 폼이 아니라 DB로 확인한 세션에서 가져온다 (approved_by를 브라우저가 바꿀 수 없게)
+// 성공하면 들어왔던 목록 탭(= 처리 전 상태)으로 돌아가 알림을 띄우고, 실패하면 세부 페이지에 머물며 이유를 돌려준다
 async function review(to: "approved" | "rejected", form: FormData, reason?: string): Promise<ActionState> {
   const { user } = await requireAdmin({ fresh: true });
   const id = String(form.get("id"));
@@ -28,7 +30,7 @@ async function review(to: "approved" | "rejected", form: FormData, reason?: stri
   if (!done) return { ok: false, message: ALREADY_DONE };
   revalidatePath("/admin/moderation");
   revalidatePath("/admin");
-  return { ok: true, message: to === "approved" ? "승인했어요. 사용자 페이지에 보여요." : "거절했어요. 사용자 페이지에서 빠졌어요." };
+  redirect(`/admin/moderation?status=${from}&done=${to}`);
 }
 
 export async function approveGame(_: ActionState, form: FormData): Promise<ActionState> {
