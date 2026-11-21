@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import AddAdminForm from "@/components/admin/AddAdminForm";
 import AdminRow from "@/components/admin/AdminRow";
+import NavLink from "@/components/ui/NavLink";
 import { requireAdmin } from "@/lib/admin";
 import { getAuth } from "@/lib/auth";
 
@@ -15,7 +15,7 @@ export default async function AdminsPage() {
   });
   return (
     <div className="space-y-4">
-      <Link href="/admin" className="text-sm text-blue-600">← 관리자 홈</Link>
+      <NavLink href="/admin" className="text-sm text-blue-600">← 관리자 홈</NavLink>
       <h1 className="text-xl font-bold">관리자 관리</h1>
       <AddAdminForm />
       <ul className="space-y-2">
