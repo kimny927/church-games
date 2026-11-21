@@ -1,19 +1,28 @@
 "use client";
 
 import { useActionState } from "react";
+import type { ActionState } from "@/app/admin/admins/actions";
 import { approveGame, rejectGame, saveNotes } from "@/app/admin/moderation/actions";
 import SubmitButton from "@/components/ui/SubmitButton";
 import type { ModerationGame } from "@/lib/types";
 import ActionMessage from "./ActionMessage";
+
+type Action = (prev: ActionState, form: FormData) => Promise<ActionState>;
 
 // 서버·브라우저 어디서 그려도 같은 문자열이 나오도록 시간대를 고정한다
 const formatDate = (d: Date) =>
   new Date(d).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium", timeStyle: "short" });
 
 // 휴대폰에서도 누르기 쉽게 카드로 그린다 (AdminRow와 같은 방식)
-export default function ModerationCard({ game }: { game: ModerationGame }) {
-  const [approveState, approveAction, approving] = useActionState(approveGame, null);
-  const [rejectState, rejectAction, rejecting] = useActionState(rejectGame, null);
+// 승인·거절 결과는 onResult로 목록에 넘긴다 (이 카드는 처리 후 사라질 수 있어서)
+export default function ModerationCard({ game, onResult }: { game: ModerationGame; onResult: (s: ActionState) => void }) {
+  const report = (action: Action): Action => async (prev, form) => {
+    const result = await action(prev, form);
+    onResult(result && { ...result, message: `${game.name}: ${result.message}` });
+    return result;
+  };
+  const [, approveAction, approving] = useActionState(report(approveGame), null);
+  const [, rejectAction, rejecting] = useActionState(report(rejectGame), null);
   const [notesState, notesAction] = useActionState(saveNotes, null);
   const deciding = approving || rejecting;
 
@@ -84,8 +93,6 @@ export default function ModerationCard({ game }: { game: ModerationGame }) {
             </SubmitButton>
           </form>
         )}
-        <ActionMessage state={approveState} />
-        <ActionMessage state={rejectState} />
       </div>
 
       <form action={notesAction} className="space-y-2 text-sm">

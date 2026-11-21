@@ -1,4 +1,4 @@
-import ModerationCard from "@/components/admin/ModerationCard";
+import ModerationList from "@/components/admin/ModerationList";
 import NavLink from "@/components/ui/NavLink";
 import { requireAdmin } from "@/lib/admin";
 import { countGamesByStatus, getGamesByStatus } from "@/lib/db";
@@ -31,15 +31,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
           </NavLink>
         ))}
       </nav>
-      {games.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-500">{REVIEW_STATUS_LABEL[status]} 상태인 게임이 없어요.</p>
-      ) : (
-        <ul className="space-y-3">
-          {games.map((g) => (
-            <ModerationCard key={g.id} game={g} />
-          ))}
-        </ul>
-      )}
+      <ModerationList games={games} emptyText={`${REVIEW_STATUS_LABEL[status]} 상태인 게임이 없어요.`} />
     </div>
   );
 }
