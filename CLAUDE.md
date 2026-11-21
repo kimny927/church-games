@@ -63,7 +63,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 **백엔드·데이터:**
 - Neon PostgreSQL (무료, 1GB × 100 프로젝트). 지금 사용 중
-- Cloudflare Workers 서버 로직 (예정, 3주차: 링크 메타데이터 추출·관리 API)
+- Cloudflare Workers 서버 로직 (예정, 3주차: 링크 메타데이터 추출). 게임 승인·거절·수정 같은 관리 작업은 Next.js 서버 액션으로 처리
 
 **파일 저장 (예정):**
 - Firebase Storage (무료, 5GB)
@@ -126,7 +126,6 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 **Cloudflare Workers (예정, 3주차):**
 - `workers/scrape.ts`: 메타데이터 추출 (제목, 설명, 썸네일, 링크)
 - `workers/filtering.ts`: 필터링 로직 (자동 필터링 규칙 적용) (MVP 이후)
-- `workers/api.ts`: 관리 API (게임 승인/거절/수정 엔드포인트)
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build (지금 있음)
