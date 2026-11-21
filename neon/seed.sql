@@ -23,3 +23,15 @@ values
    '{팀 대항,말씀 묵상,실내}', '시편 23편', '{두뇌형}', '무료',
    '{중고등부,청년부,장년부}', '10분 이내', '중그룹(10~30명)', '인쇄한 단어 카드',
    'approved', 'seed', now());
+
+-- 심의 화면 확인용 대기 게임 2개 (id가 sample- 로 시작). 대기 상태라 사용자 페이지에는 안 보여요.
+-- 이미 DB가 있으면 이 부분만 SQL Editor에서 실행하세요. 다 보고 나면: delete from games where id like 'sample-%';
+insert into games (id, name, summary, link, source_type, tags, game_types, budget, ages, duration, group_size)
+values
+  ('sample-blind-drawing', '말씀 그림 전달', '한 명이 말씀 구절을 보고 말로만 설명하면, 팀원이 그림으로 그려 구절을 맞히는 게임.',
+   'https://example.com/blind-drawing', '유튜브', '{팀 대항,말씀 묵상,실내}', '{두뇌형}', '무료',
+   '{초등부,중고등부,청년부}', '10~30분', '중그룹(10~30명)'),
+  ('sample-noah-ark', '노아의 방주 짝 찾기', '동물 카드를 나눠 갖고 소리·몸짓만으로 같은 동물 짝을 찾아 방주(정해진 구역)에 들어가는 게임.',
+   'https://example.com/noah-ark', '블로그', '{아이스브레이킹,레크리에이션}', '{신체형}', '1만원 이하',
+   '{유아·유치부,초등부}', '10분 이내', '대그룹(30명 이상)')
+on conflict (id) do nothing;

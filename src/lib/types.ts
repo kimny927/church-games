@@ -29,3 +29,23 @@ export const FILTERS = {
   groupSize: ["소그룹(~10명)", "중그룹(10~30명)", "대그룹(30명 이상)"],
   tags: ["아이스브레이킹", "팀 대항", "레크리에이션", "말씀 묵상", "실내", "야외"],
 } as const;
+
+// 심의 상태. DB 값은 영어, 화면에는 한국어로 (docs/decisions.md 2026-11-15)
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
+export const REVIEW_STATUS_LABEL: Record<ReviewStatus, string> = {
+  pending: "대기",
+  approved: "승인",
+  rejected: "거절",
+};
+
+// 관리자 심의 화면용: 사용자 화면에는 없는 심의 칼럼까지
+export type ModerationGame = Game & {
+  status: ReviewStatus;
+  autoScraped: boolean;
+  reviewer?: string; // 심의한 관리자 이메일 (계정이 없으면 approved_by 원래 값)
+  reviewedAt?: Date;
+  rejectionReason?: string;
+  adminNotes?: string;
+  createdAt: Date;
+};
