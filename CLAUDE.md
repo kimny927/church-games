@@ -69,7 +69,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - Firebase Storage (무료, 5GB)
 
 **자동화:**
-- GitHub Actions: 지금은 PR 빌드 CI(`ci.yml`)만. 정기 콘텐츠 스크래핑은 MVP 이후
+- GitHub Actions: PR 빌드 CI(`ci.yml`)만. 비밀값을 넣지 않는다 (공개 저장소라 로그가 공개됨)
+- 자동 수집: 수집 전용 Worker(`workers/collect/`)의 cron, 하루 1번 최대 3개 (만드는 중). 이유는 `docs/decisions.md` 2026-11-25
 
 **인증:**
 - 관리자 (3주차): Better Auth 이메일+비밀번호. 역할 `owner`(최고 관리자) / `admin`(관리자), 공개 가입 금지, 해시는 Web Crypto PBKDF2. 이유는 `docs/decisions.md` 2026-11-19
@@ -84,6 +85,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run preview`: Cloudflare Workers 런타임으로 로컬 실행 (배포 환경에서만 생기는 문제 확인용)
 - `npm run deploy`: 수동 배포 (평소에는 main 병합 시 자동 배포)
 - `npm run db:check`: Neon 연결 확인 (`.env.local`의 `DATABASE_URL` 사용, 상태별 게임 개수 출력)
+- `npm run collect:dry-run`: 자동 수집을 로컬에서 돌려 후보·거른 글만 출력 (DB에 안 씀, `.env.local`의 검색 API 키 사용)
+- `npm run test:collect`: 자동 수집의 글 정리·거르기·주소 맞추기 테스트 (키 없이 돎). 거르기 규칙을 바꾸면 반드시 돌린다
 - `npx tsx --env-file=.env.local scripts/auth-sql.mts > neon/auth.sql`: Better Auth 테이블 SQL 생성 (DB는 읽기만, Better Auth 업그레이드 후 다시 실행)
 - `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일> [닉네임]`: 첫 최고 관리자 생성, 임시 비밀번호 출력 (닉네임을 빼면 이메일 앞부분)
 - `scripts/test-admin-auth.sh`: 관리자 인증·권한 시나리오 테스트. `npm run preview`를 띄운 뒤 실행 (`@test.local` 테스트 계정을 만들고 끝나면 지움). 인증·권한을 바꾼 PR마다 돌린다
@@ -131,12 +134,16 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
   - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
 
-**자동 필터링 (MVP 이후):**
-- 필터링 로직 (자동 필터링 규칙 적용). 위치는 정기 수집과 함께 정한다
+**자동 수집 (`workers/collect/src/`, 만드는 중):** Next.js 코드(`@/` 경로, `next/*`)를 쓰지 않는다. 수집 전용 Worker에서 돈다
+- `search.ts`: 카카오 Daum 블로그·유튜브 검색 API → 후보 (네이버 검색 API는 쓰지 않음, decisions 2026-11-25). 유튜브 키는 주소가 아니라 헤더로
+- `rules.ts`: 검색 키워드, 거를 말(이단·광고), 주입 흔적 패턴. `candidates.ts`: 검색 → 주소 맞추기 → 거르기 → 순서(출처를 번갈아 최신순, AI 확신도로 정하지 않음)
+- `text.ts`: 태그·엔티티·안 보이는 문자 제거, NFKC. 비교용 `compact`(붙여 씀, 우회 잡기)·`spaced`(짧은 낱말은 낱말 시작에서만)
+- `url.ts`: 네이버 블로그·유튜브 주소를 한 모양으로 (중복 확인). `budget.ts`: 외부 호출 예산 40 (무료 플랜 50)
+- 오류는 우리가 만든 메시지나 종류만 남긴다 (요청 주소·응답 본문·비밀값을 로그에 남기지 않음)
+- 다음 PR: Claude Haiku 초안과 출력 검사, Worker·cron·`collect_seen`·수집 전용 DB 계정
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build (지금 있음)
-- `.github/workflows/scrape.yml`: 자동 스크래핑 (MVP 이후, 매일 자정 실행)
 
 ## 콘텐츠 수집 방식
 
@@ -149,11 +156,11 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 장점: 신뢰할 수 있는 콘텐츠만 추가, 품질 관리 용이
 - 시간: 진선이가 월 5~15개 정도 입력 가능
 
-**B. 완전 자동 (GitHub Actions로 정기 스크래핑, MVP 이후)**
-- GitHub Actions가 매일 자정에 자동 실행
-- RSS 피드(블로그, 유튜브 채널) 위주로 자동 수집
-- 메타데이터 자동 추출 후 Neon에 저장 (status: 'pending')
-- 진선이 심의 후 승인 필요 (또는 자동 승인 설정 가능)
+**B. 자동 수집 (만드는 중)**
+- 수집 전용 Worker의 cron이 하루 1번, 최대 3개
+- 카카오 Daum 블로그·유튜브 공식 검색 API로 키워드 검색 (RSS는 아는 채널만 볼 수 있어서)
+- 코드로 거른 뒤 Claude Haiku가 게임인지 판단하고 초안 작성 → Neon에 저장 (status: 'pending', `auto_scraped` true)
+- 진선이 심의 후 승인 필요. 자동 승인은 하지 않는다
 - 장점: 콘텐츠 풍부, 최신 정보 자동 업데이트
 - 단점: 운영자 심의 시간 필요
 
@@ -175,7 +182,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 **소스별 개별 설정 (`source_type`: 블로그·유튜브·인스타그램·기타):**
 - 유튜브: 수동 승인 필수
-- 블로그: 자동 승인 가능
+- 블로그: 수동 승인 필수 (자동 수집한 게임은 출처와 상관없이 자동 승인하지 않는다, 2026-11-25)
 - 인스타그램·기타: 수동 승인 필수 (진선이 큐레이션 우선)
 
 **자동 필터링 규칙:**
@@ -195,8 +202,9 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 모바일 화면에서 먼저 확인한다 (사용자는 주로 휴대폰으로 볼 것).
 - 비밀키(Neon DB 연결, Firebase API 키 등)는 절대 커밋하지 않는다. `.env.local` 또는 Cloudflare 런타임 Secret 사용.
 - 스크래핑할 때 각 사이트의 `robots.txt`와 이용약관 확인 (무단 크롤링 방지).
-- 자동 스크래핑은 RSS 피드 우선, HTML 파싱은 최후의 수단 (부하 고려).
-- Cloudflare Workers 무료 플랜은 요청당 CPU 시간 10ms, 외부 호출(subrequest) 50개로 제한된다 (응답 대기 시간은 CPU에 안 들어감, 2026-11 공식 문서 기준). 여러 사이트를 도는 스크래핑처럼 CPU·외부 호출이 많은 작업은 GitHub Actions에서 처리.
+- 자동 수집은 공식 API(검색 API·RSS) 우선, HTML 파싱은 최후의 수단 (부하 고려). 지금은 블로그 최종 후보의 썸네일(`<head>`)만 직접 가져온다.
+- 자동 수집 글은 믿을 수 없는 데이터다. AI에는 제목과 짧은 요약만 넣고, AI 판단은 후보를 버리는 데만 쓴다 (통과시키지 않음). 링크·이름·순서는 코드가 정한다.
+- Cloudflare Workers 무료 플랜은 요청당 CPU 시간 10ms, 외부 호출(subrequest) 50개로 제한된다 (응답 대기 시간은 CPU에 안 들어감, 2026-11 공식 문서 기준). 자동 수집은 `budget.ts`로 외부 호출을 세고, 목표를 하루 3개로 줄여 이 한도에 맞춘다.
 - Firebase Storage 5GB 무료 한계 모니터링 (초과 시 월 ~$2 추가 비용).
 
 ## Neon DB 스키마 (`neon/schema.sql`)

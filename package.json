@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:check": "node --env-file=.env.local scripts/db-check.mjs",
+    "collect:dry-run": "tsx --env-file=.env.local scripts/collect-dry-run.mts",
+    "test:collect": "tsx scripts/test-collect-rules.mts",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
