@@ -20,6 +20,7 @@ create table games (
   duration text,
   group_size text,
   supplies text,                             -- 준비물
+  thumbnail_url text,                        -- 원본의 대표 이미지 주소 (링크에서 가져옴, 외부 주소라 깨질 수 있음). 2026-11-25 추가: alter table games add column thumbnail_url text;
 
   -- 심의
   status text not null default 'pending' check (status in ('pending','approved','rejected')),

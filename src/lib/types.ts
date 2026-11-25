@@ -21,6 +21,7 @@ export type Game = {
   duration: "10분 이내" | "10~30분" | "30분~1시간" | "1시간 이상";
   groupSize: "소그룹(~10명)" | "중그룹(10~30명)" | "대그룹(30명 이상)";
   supplies?: string; // 준비물
+  thumbnailUrl?: string; // 원본의 대표 이미지 (외부 주소라 만료·차단될 수 있어 화면에서 깨지면 기본 모양)
 };
 
 export const FILTERS = {

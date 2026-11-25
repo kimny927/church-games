@@ -96,7 +96,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/components/GameBrowser.tsx`: 목록 + 검색 + 필터 (클라이언트 컴포넌트)
 - `src/app/(site)/games/[id]/page.tsx`: 게임 상세 페이지
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
-- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`, `Toast`(잠깐 뜨는 알림), `AlertDialog`(확인 팝업)). 테마를 바꿀 때 여기부터 고친다
+- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`, `Toast`(잠깐 뜨는 알림), `AlertDialog`(확인 팝업), `Thumbnail`(외부 이미지, 없거나 깨지면 기본 모양)). 테마를 바꿀 때 여기부터 고친다
 - `src/components/GameInfo.tsx`: 게임 세부 정보 표. 사용자 상세 페이지와 관리자 심의 세부가 같이 쓴다
   - 폼 제출 버튼은 `SubmitButton` (서버 액션 폼이면 제출 중을 스스로 앎, 아니면 `pending` prop)
   - 화면 전환: 사용자 페이지는 `src/app/(site)/loading.tsx`(URL엔 `(site)`가 안 붙음), 관리자 화면은 링크에 `NavLink`. 관리자 쪽에 `loading.tsx`를 두면 응답을 먼저 보내서 `requireAdmin`의 redirect가 307이 아니게 되므로 두지 않는다
@@ -120,7 +120,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - 새 게임은 대기로 시작, id는 자동 생성(`g-` + 6자, 겹치면 다시 뽑음). 수정해도 상태·심의 기록은 그대로
   - 폼은 `<form action>` 대신 `onSubmit`으로 서버 액션을 부른다 (React 19가 action 폼을 제출 후 비워서 오류 때 입력이 사라짐)
   - 심의자(`approved_by`)는 폼이 아니라 세션의 `user.id`. 상태 변경은 `db.ts`의 `reviewGame`이 '화면을 본 시점의 상태'일 때만 해서 동시 처리를 막는다
-  - '정보 가져오기': `src/lib/link-meta.ts`가 링크에서 제목·설명·썸네일을 가져오고 소스 종류를 추측한다 (유튜브 oEmbed, 그 밖은 `<head>`의 og 태그). 빈 칸만 채우고, 원본 설명은 참고로만 보여 주며 저장하지 않는다
+  - '정보 가져오기': `src/lib/link-meta.ts`가 링크에서 제목·설명·썸네일을 가져오고 소스 종류를 추측한다 (유튜브 oEmbed, 그 밖은 `<head>`의 og 태그). 빈 칸만 채우고, 원본 설명은 참고로만 보여 주며 저장하지 않는다. 썸네일은 새로 가져오면 바꾸고 '썸네일 빼기'로 지울 수 있다(숨은 칸 `thumbnailUrl`)
   - `link-meta.ts`는 `localhost`·IP 주소를 거절하고 리다이렉트를 직접 따라가며 다시 확인한다 (배포 환경은 `wrangler.jsonc`의 `global_fetch_strictly_public`도 막음). 5초·256KB 제한
 - `neon/auth.sql`: Better Auth 테이블 (user, session, account, verification, rateLimit)
 - 서버에서 `auth.api.createUser` 등 관리 API를 부를 때는 반드시 `headers: await headers()`를 넘긴다. 헤더가 없으면 권한 확인을 건너뛴다 (첫 owner 생성 스크립트만 예외)
@@ -203,6 +203,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 지금은 `games` 테이블만 있다. 회원·댓글·후기는 로그인 방식을 정하는 4주차에 추가.
 - 심의 칼럼: `status`('pending'/'approved'/'rejected'), `auto_scraped`(A방식 false / B방식 true), `created_by`(등록한 관리자), `approved_by`, `approved_at`, `rejection_reason`(거절 시 필수, DB 제약조건), `admin_notes`, `updated_at`(트리거로 자동 갱신)
 - 원본 링크는 `link` 칼럼 (별도 `source_url` 없음)
+- 썸네일은 `thumbnail_url` 칼럼. 원본 사이트의 이미지 주소만 저장하고 파일은 복사하지 않는다 (사용자 카드·상세는 있을 때만, 관리자 심의 세부는 없으면 '썸네일 없음')
 - Neon에는 Supabase의 auth·RLS가 없다. 브라우저는 DB에 직접 붙지 않고, 서버 코드가 권한을 판단한다 (사용자 페이지는 `approved`만 조회).
 - DB 칼럼은 snake_case, `Game` 타입은 camelCase. 변환은 `src/lib/db.ts`에서.
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Thumbnail from "@/components/ui/Thumbnail";
 import { useMemo, useState } from "react";
 import { FILTERS, type Game } from "@/lib/types";
 
@@ -76,14 +77,18 @@ export default function GameBrowser({ games }: { games: Game[] }) {
       <ul className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {results.map((g) => (
           <li key={g.id}>
-            <Link href={`/games/${g.id}`} className="block h-full rounded-xl border border-gray-200 p-4 hover:shadow-md">
-              <p className="text-xs text-gray-500">{g.sourceType} · {g.duration} · {g.groupSize}</p>
-              <h2 className="mt-1 text-lg font-bold">{g.name}</h2>
-              <p className="mt-2 line-clamp-3 text-sm text-gray-700">{g.summary}</p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {g.tags.map((t) => (
-                  <span key={t} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">#{t}</span>
-                ))}
+            <Link href={`/games/${g.id}`} className="block h-full overflow-hidden rounded-xl border border-gray-200 hover:shadow-md">
+              {/* 썸네일이 있는 게임만 위에 보여 준다. 깨지면 같은 크기의 기본 모양이라 카드 모양은 그대로 */}
+              {g.thumbnailUrl && <Thumbnail src={g.thumbnailUrl} fallback={g.sourceType} className="aspect-video w-full" />}
+              <div className="p-4">
+                <p className="text-xs text-gray-500">{g.sourceType} · {g.duration} · {g.groupSize}</p>
+                <h2 className="mt-1 text-lg font-bold">{g.name}</h2>
+                <p className="mt-2 line-clamp-3 text-sm text-gray-700">{g.summary}</p>
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {g.tags.map((t) => (
+                    <span key={t} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">#{t}</span>
+                  ))}
+                </div>
               </div>
             </Link>
           </li>

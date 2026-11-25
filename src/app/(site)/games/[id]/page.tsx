@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import GameInfo from "@/components/GameInfo";
+import Thumbnail from "@/components/ui/Thumbnail";
 import { getPublishedGame } from "@/lib/db";
 
 // 요청마다 DB에서 읽는다(SSR). 승인되지 않은 게임은 조회되지 않아 404가 된다.
@@ -14,6 +15,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   return (
     <article>
       <Link href="/" className="text-sm text-blue-600">← 목록으로</Link>
+      {game.thumbnailUrl && <Thumbnail src={game.thumbnailUrl} fallback={game.sourceType} className="mt-3 aspect-video w-full rounded-xl" />}
       <h1 className="mt-3 text-2xl font-bold">{game.name}</h1>
       <div className="mt-2 flex flex-wrap gap-1">
         {game.tags.map((t) => (

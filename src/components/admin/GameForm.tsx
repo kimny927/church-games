@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { createGameAction, fetchLinkMetaAction, updateGameAction } from "@/app/admin/games/actions";
 import SubmitButton from "@/components/ui/SubmitButton";
+import Thumbnail from "@/components/ui/Thumbnail";
 import { FILTERS, SOURCE_TYPES, type ModerationGame } from "@/lib/types";
 import ActionMessage from "./ActionMessage";
 
@@ -56,8 +57,11 @@ export default function GameForm({ game }: { game?: ModerationGame }) {
   const [meta, setMeta] = useState<LinkMetaResult | null>(null);
   const [fetching, startFetching] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  // 썸네일은 직접 쓰는 칸이 아니라서 state로 두고 숨은 칸으로 보낸다
+  const [thumbnail, setThumbnail] = useState(game?.thumbnailUrl ?? "");
 
   // 링크에서 정보를 가져와 비어 있는 칸만 채운다. 이미 쓴 이름·고른 소스 종류는 덮어쓰지 않는다.
+  // 썸네일은 직접 쓴 값이 아니라서 새로 가져온 이미지가 있으면 바꾼다 (없으면 기존 것 유지)
   // 칸들이 defaultValue(비제어)라서 state 대신 폼 요소에 값을 직접 넣는다
   function onFetchMeta() {
     const form = formRef.current;
@@ -73,6 +77,7 @@ export default function GameForm({ game }: { game?: ModerationGame }) {
       const sourceType = form.elements.namedItem("sourceType") as HTMLSelectElement;
       if (!name.value.trim() && result.meta.title) name.value = result.meta.title;
       if (!sourceType.value) sourceType.value = result.meta.sourceType;
+      if (result.meta.image) setThumbnail(result.meta.image);
     });
   }
 
@@ -112,25 +117,31 @@ export default function GameForm({ game }: { game?: ModerationGame }) {
           {!meta.ok ? (
             <p>{meta.message}</p>
           ) : (
-            <div className="flex gap-3">
-              {meta.meta.image && (
-                // 미리보기용. 외부 이미지라 next/image 대신 img, 원본 사이트가 referer로 막지 않게 no-referrer
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={meta.meta.image} alt="" referrerPolicy="no-referrer" className="h-16 w-24 shrink-0 rounded object-cover" />
+            <div className="min-w-0 space-y-1">
+              {meta.meta.title && <p className="font-medium">{meta.meta.title}</p>}
+              {meta.meta.description && (
+                <>
+                  <p className="text-gray-700">{meta.meta.description}</p>
+                  <p className="text-xs text-gray-500">원문 설명은 참고용이에요. 저장되지 않으니 소개글은 직접 요약해 주세요.</p>
+                </>
               )}
-              <div className="min-w-0 space-y-1">
-                {meta.meta.title && <p className="font-medium">{meta.meta.title}</p>}
-                {meta.meta.description && (
-                  <>
-                    <p className="text-gray-700">{meta.meta.description}</p>
-                    <p className="text-xs text-gray-500">원문 설명은 참고용이에요. 저장되지 않으니 소개글은 직접 요약해 주세요.</p>
-                  </>
-                )}
-              </div>
             </div>
           )}
         </div>
       )}
+      <div className="space-y-1">
+        <span className="text-sm font-medium">썸네일</span>
+        <input type="hidden" name="thumbnailUrl" value={thumbnail} />
+        <div className="flex items-end gap-3">
+          <Thumbnail src={thumbnail || undefined} fallback="없음" className="aspect-video w-40 shrink-0 rounded" />
+          {thumbnail && (
+            <button type="button" onClick={() => setThumbnail("")} className="rounded border px-3 py-1 text-sm">
+              썸네일 빼기
+            </button>
+          )}
+        </div>
+        <span className="block text-xs text-gray-500">{"'정보 가져오기'로 원본의 대표 이미지를 가져와요. 원본 사이트의 이미지를 그대로 보여 주므로 나중에 깨질 수 있어요."}</span>
+      </div>
       <Select name="sourceType" label="소스 종류" options={SOURCE_TYPES} value={game?.sourceType} />
       <Field label="게임 이름 *">
         <input name="name" required maxLength={100} defaultValue={game?.name} className={input} />
