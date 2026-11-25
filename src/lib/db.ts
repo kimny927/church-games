@@ -31,6 +31,7 @@ function toGame(row: Record<string, unknown>): Game {
     duration: row.duration as Game["duration"],
     groupSize: row.group_size as Game["groupSize"],
     supplies: (row.supplies as string) ?? undefined,
+    thumbnailUrl: (row.thumbnail_url as string) ?? undefined,
   };
 }
 
@@ -138,9 +139,9 @@ export async function createGame(input: GameInput, createdBy: string): Promise<{
     const id = newGameId();
     try {
       await sql()`
-        insert into games (id, name, summary, link, source_type, tags, verse, game_types, budget, ages, duration, group_size, supplies, created_by)
+        insert into games (id, name, summary, link, source_type, tags, verse, game_types, budget, ages, duration, group_size, supplies, thumbnail_url, created_by)
         values (${id}, ${g.name}, ${g.summary}, ${g.link}, ${g.sourceType}, ${g.tags}, ${g.verse ?? null}, ${g.gameTypes},
-                ${g.budget}, ${g.ages}, ${g.duration}, ${g.groupSize}, ${g.supplies ?? null}, ${createdBy})`;
+                ${g.budget}, ${g.ages}, ${g.duration}, ${g.groupSize}, ${g.supplies ?? null}, ${g.thumbnailUrl ?? null}, ${createdBy})`;
       return { id, status: "pending" };
     } catch (e) {
       const uniqueViolation = (e as { code?: string }).code === "23505";
@@ -156,7 +157,8 @@ export async function updateGame(id: string, input: GameInput): Promise<ReviewSt
     update games
     set name = ${g.name}, summary = ${g.summary}, link = ${g.link}, source_type = ${g.sourceType}, tags = ${g.tags},
         verse = ${g.verse ?? null}, game_types = ${g.gameTypes}, budget = ${g.budget}, ages = ${g.ages},
-        duration = ${g.duration}, group_size = ${g.groupSize}, supplies = ${g.supplies ?? null}
+        duration = ${g.duration}, group_size = ${g.groupSize}, supplies = ${g.supplies ?? null},
+        thumbnail_url = ${g.thumbnailUrl ?? null}
     where id = ${id}
     returning status`;
   return rows[0]?.status as ReviewStatus | undefined;

@@ -4,7 +4,7 @@ import { FILTERS, SOURCE_TYPES, type GameInput } from "./types";
 
 type Result = { ok: true; input: GameInput } | { ok: false; message: string };
 
-const MAX = { name: 100, link: 500, summary: 1000, verse: 100, supplies: 300 };
+const MAX = { name: 100, link: 500, summary: 1000, verse: 100, supplies: 300, thumbnailUrl: 1000 };
 
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 
@@ -37,6 +37,7 @@ export function parseGameForm(form: FormData): Result {
   const summary = text(form, "summary");
   const verse = text(form, "verse");
   const supplies = text(form, "supplies");
+  const thumbnailUrl = text(form, "thumbnailUrl"); // 숨은 칸. '정보 가져오기'가 채운다
 
   if (!link) return fail("원본 링크를 넣어 주세요.");
   if (!isHttpUrl(link) || link.length > MAX.link) return fail("원본 링크는 http:// 또는 https:// 로 시작하는 주소여야 해요.");
@@ -46,6 +47,8 @@ export function parseGameForm(form: FormData): Result {
   if (summary.length > MAX.summary) return fail(`소개글은 ${MAX.summary}자까지 쓸 수 있어요.`);
   if (verse.length > MAX.verse) return fail(`관련 말씀은 ${MAX.verse}자까지 쓸 수 있어요.`);
   if (supplies.length > MAX.supplies) return fail(`준비물은 ${MAX.supplies}자까지 쓸 수 있어요.`);
+  // 화면에 <img src>로 넣으므로 http(s)만 받는다 (javascript: 같은 주소 차단)
+  if (thumbnailUrl && (!isHttpUrl(thumbnailUrl) || thumbnailUrl.length > MAX.thumbnailUrl)) return fail("썸네일 주소가 올바르지 않아요. 정보를 다시 가져오거나 썸네일을 빼 주세요.");
 
   const sourceType = pick(form, "sourceType", SOURCE_TYPES);
   const budget = pick(form, "budget", FILTERS.budget);
@@ -67,6 +70,7 @@ export function parseGameForm(form: FormData): Result {
       name, link, summary, sourceType, budget, duration, groupSize, tags, gameTypes, ages,
       verse: verse || undefined,
       supplies: supplies || undefined,
+      thumbnailUrl: thumbnailUrl || undefined,
     },
   };
 }
