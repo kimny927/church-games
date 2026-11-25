@@ -20,7 +20,7 @@ function pickMany<T extends string>(form: FormData, key: string, options: readon
   return values.every((v) => options.includes(v as T)) ? [...new Set(values)] as T[] : undefined;
 }
 
-function isHttpUrl(v: string) {
+export function isHttpUrl(v: string) {
   try {
     const url = new URL(v);
     return url.protocol === "http:" || url.protocol === "https:";

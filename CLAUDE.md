@@ -63,7 +63,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 **백엔드·데이터:**
 - Neon PostgreSQL (무료, 1GB × 100 프로젝트). 지금 사용 중
-- Cloudflare Workers 서버 로직 (예정, 3주차: 링크 메타데이터 추출). 게임 승인·거절·수정 같은 관리 작업은 Next.js 서버 액션으로 처리
+- 서버 로직은 별도 Workers 없이 Next.js 서버 액션 (게임 승인·거절·수정, 링크 메타데이터 추출). 이유는 `docs/decisions.md` 2026-11-25
 
 **파일 저장 (예정):**
 - Firebase Storage (무료, 5GB)
@@ -120,6 +120,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - 새 게임은 대기로 시작, id는 자동 생성(`g-` + 6자, 겹치면 다시 뽑음). 수정해도 상태·심의 기록은 그대로
   - 폼은 `<form action>` 대신 `onSubmit`으로 서버 액션을 부른다 (React 19가 action 폼을 제출 후 비워서 오류 때 입력이 사라짐)
   - 심의자(`approved_by`)는 폼이 아니라 세션의 `user.id`. 상태 변경은 `db.ts`의 `reviewGame`이 '화면을 본 시점의 상태'일 때만 해서 동시 처리를 막는다
+  - '정보 가져오기': `src/lib/link-meta.ts`가 링크에서 제목·설명·썸네일을 가져오고 소스 종류를 추측한다 (유튜브 oEmbed, 그 밖은 `<head>`의 og 태그). 빈 칸만 채우고, 원본 설명은 참고로만 보여 주며 저장하지 않는다
+  - `link-meta.ts`는 `localhost`·IP 주소를 거절하고 리다이렉트를 직접 따라가며 다시 확인한다 (배포 환경은 `wrangler.jsonc`의 `global_fetch_strictly_public`도 막음). 5초·256KB 제한
 - `neon/auth.sql`: Better Auth 테이블 (user, session, account, verification, rateLimit)
 - 서버에서 `auth.api.createUser` 등 관리 API를 부를 때는 반드시 `headers: await headers()`를 넘긴다. 헤더가 없으면 권한 확인을 건너뛴다 (첫 owner 생성 스크립트만 예외)
 
@@ -129,9 +131,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
   - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
 
-**Cloudflare Workers (예정, 3주차):**
-- `workers/scrape.ts`: 메타데이터 추출 (제목, 설명, 썸네일, 링크)
-- `workers/filtering.ts`: 필터링 로직 (자동 필터링 규칙 적용) (MVP 이후)
+**자동 필터링 (MVP 이후):**
+- 필터링 로직 (자동 필터링 규칙 적용). 위치는 정기 수집과 함께 정한다
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build (지금 있음)
@@ -143,7 +144,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 **A. 반자동 (수동 입력 + 자동 추출)**
 - 진선이가 블로그/유튜브/인스타그램 URL 입력 (노션 공개 페이지 등 그 밖의 곳은 '기타')
-- Cloudflare Workers가 자동으로 메타데이터 추출 (제목, 설명, 썸네일, 링크)
+- 게임 폼의 '정보 가져오기'가 메타데이터 추출 (제목, 설명, 썸네일, 소스 종류)
 - 즉시 또는 심의 후 사용자 페이지 표시
 - 장점: 신뢰할 수 있는 콘텐츠만 추가, 품질 관리 용이
 - 시간: 진선이가 월 5~15개 정도 입력 가능

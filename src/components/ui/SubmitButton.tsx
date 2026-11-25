@@ -9,13 +9,13 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 // 폼 제출 버튼. <form action={서버 액션}> 안에서는 제출 중인지 스스로 알고, 그동안 막고 스피너를 보여 준다
-export default function SubmitButton({ pendingText, pending, disabled, className = "", children, ...rest }: Props) {
+export default function SubmitButton({ pendingText, pending, disabled, type = "submit", className = "", children, ...rest }: Props) {
   const status = useFormStatus();
   const isPending = pending || status.pending;
   return (
     <button
       {...rest}
-      type="submit"
+      type={type} // 폼 안의 보조 버튼(예: 정보 가져오기)은 type="button"
       disabled={disabled || isPending}
       aria-busy={isPending}
       className={`inline-flex items-center justify-center gap-2 disabled:opacity-50 ${className}`}
