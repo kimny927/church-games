@@ -5,7 +5,18 @@ import { redirect } from "next/navigation";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { requireAdmin } from "@/lib/admin";
 import { createGame, updateGame } from "@/lib/db";
-import { parseGameForm } from "@/lib/game-form";
+import { isHttpUrl, parseGameForm } from "@/lib/game-form";
+import { fetchLinkMeta } from "@/lib/link-meta";
+
+// 원본 링크에서 제목·설명·썸네일 가져오기. 아무것도 저장하지 않는 읽기라 쿠키 캐시 세션으로 충분하다
+export async function fetchLinkMetaAction(link: string) {
+  await requireAdmin();
+  const url = String(link ?? "").trim();
+  if (!isHttpUrl(url) || url.length > 500) {
+    return { ok: false as const, message: "원본 링크는 http:// 또는 https:// 로 시작하는 주소여야 해요." };
+  }
+  return fetchLinkMeta(url);
+}
 
 // 등록·수정이 끝나면 그 게임의 심의 세부 페이지로 보낸다. 입력한 내용을 바로 확인하고 승인할 수 있게
 
