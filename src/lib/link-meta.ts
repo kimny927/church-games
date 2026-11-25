@@ -69,7 +69,8 @@ const clip = (v: string | undefined, max: number) => {
 };
 
 // og 태그에 자주 나오는 엔티티만 푼다
-function decodeEntities(s: string) {
+// 자동 수집(workers/collect)도 검색 결과를 정리할 때 같이 쓴다
+export function decodeEntities(s: string) {
   return s
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
