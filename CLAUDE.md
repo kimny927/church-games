@@ -74,7 +74,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 **인증:**
 - 관리자 (3주차): Better Auth 이메일+비밀번호. 역할 `owner`(최고 관리자) / `admin`(관리자), 공개 가입 금지, 해시는 Web Crypto PBKDF2. 이유는 `docs/decisions.md` 2026-11-19
-- 일반 사용자 (4주차에 결정): 카카오 로그인
+- 일반 사용자: 카카오 로그인 (자동 수집보다 우선순위를 낮춤, `docs/decisions.md` 2026-11-25)
 
 **특징:** 완전 무료로 시작, 상업 사용 가능 (광고 포함), 트래픽 증가 시에만 비용 발생
 
@@ -128,22 +128,22 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `neon/auth.sql`: Better Auth 테이블 (user, session, account, verification, rateLimit)
 - 서버에서 `auth.api.createUser` 등 관리 API를 부를 때는 반드시 `headers: await headers()`를 넘긴다. 헤더가 없으면 권한 확인을 건너뛴다 (첫 owner 생성 스크립트만 예외)
 
-아래는 아직 없는 파일이다. 만들 때 이 구조를 따른다.
-
-**관리자 페이지 (예정):**
-  - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
-  - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
-
 **자동 수집 (`workers/collect/src/`, 만드는 중):** Next.js 코드(`@/` 경로, `next/*`)를 쓰지 않는다. 수집 전용 Worker에서 돈다
 - `search.ts`: 카카오 Daum 블로그·유튜브 검색 API → 후보 (네이버 검색 API는 쓰지 않음, decisions 2026-11-25). 유튜브 키는 주소가 아니라 헤더로
-- `rules.ts`: 검색 키워드, 거를 말(이단·광고), 주입 흔적 패턴. `candidates.ts`: 검색 → 주소 맞추기 → 거르기 → 순서(출처를 번갈아 최신순, AI 확신도로 정하지 않음)
+- `rules.ts`: 검색 키워드, 거를 말(이단·광고), 게임 관련 말(없으면 거름), 주입 흔적 패턴. 이단 단체 이름은 심의에서 발견할 때마다 추가한다. `candidates.ts`: 검색 → 주소 맞추기 → 거르기 → 순서(출처를 번갈아 최신순, AI 확신도로 정하지 않음)
 - `text.ts`: 태그·엔티티·안 보이는 문자 제거, NFKC. 비교용 `compact`(붙여 씀, 우회 잡기)·`spaced`(짧은 낱말은 낱말 시작에서만)
 - `url.ts`: 네이버 블로그·유튜브 주소를 한 모양으로 (중복 확인). `budget.ts`: 외부 호출 예산 40 (무료 플랜 50)
 - 오류는 우리가 만든 메시지나 종류만 남긴다 (요청 주소·응답 본문·비밀값을 로그에 남기지 않음)
 - 다음 PR: Claude Haiku 초안과 출력 검사, Worker·cron·`collect_seen`·수집 전용 DB 계정
 
 **GitHub Actions:**
-- `.github/workflows/ci.yml`: PR·main push마다 lint + build (지금 있음)
+- `.github/workflows/ci.yml`: PR·main push마다 lint + build
+
+아래는 아직 없는 파일이다. 만들 때 이 구조를 따른다.
+
+**관리자 페이지 (예정):**
+  - `settings/page.tsx`: 필터링 설정 (자동 승인 vs 수동 승인, 소스별 설정) (MVP 이후)
+  - `analytics/page.tsx`: 스크래핑 현황 (MVP 이후, 선택사항)
 
 ## 콘텐츠 수집 방식
 
@@ -185,10 +185,11 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 블로그: 수동 승인 필수 (자동 수집한 게임은 출처와 상관없이 자동 승인하지 않는다, 2026-11-25)
 - 인스타그램·기타: 수동 승인 필수 (진선이 큐레이션 우선)
 
-**자동 필터링 규칙:**
-- 최소 길이 제한 (예: 60초 이상 영상만)
-- 최대 나이 제한 (예: 1년 이내 콘텐츠만)
-- 제외 키워드 (예: "신천지", "이단" 포함 콘텐츠 자동 거절)
+**자동 필터링 규칙 (`workers/collect/src/rules.ts`, AI에 보내기 전에 코드로 거름):**
+- 1년보다 오래된 글, 이미 본 글·중복
+- 제외 키워드: 이단(띄어쓰기·기호 우회 포함)·광고 글
+- 게임 관련 말이 없는 글, AI에게 지시하려는 흔적이 있는 글
+- 최소 길이 제한 (예: 60초 이상 영상만): 아직 없음
 
 **Neon DB에 저장되는 심의 정보:**
 - `status`: 'pending', 'approved', 'rejected' (사용자 페이지에는 'approved'만 표시. 관리자 수정 여부는 `updated_at`으로 확인)
@@ -202,7 +203,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 모바일 화면에서 먼저 확인한다 (사용자는 주로 휴대폰으로 볼 것).
 - 비밀키(Neon DB 연결, Firebase API 키 등)는 절대 커밋하지 않는다. `.env.local` 또는 Cloudflare 런타임 Secret 사용.
 - 스크래핑할 때 각 사이트의 `robots.txt`와 이용약관 확인 (무단 크롤링 방지).
-- 자동 수집은 공식 API(검색 API·RSS) 우선, HTML 파싱은 최후의 수단 (부하 고려). 지금은 블로그 최종 후보의 썸네일(`<head>`)만 직접 가져온다.
+- 자동 수집은 공식 API(검색 API·RSS) 우선, HTML 파싱은 최후의 수단 (부하 고려). 지금은 페이지를 직접 가져오지 않는다 (썸네일도 검색 API가 주는 것).
 - 자동 수집 글은 믿을 수 없는 데이터다. AI에는 제목과 짧은 요약만 넣고, AI 판단은 후보를 버리는 데만 쓴다 (통과시키지 않음). 링크·이름·순서는 코드가 정한다.
 - Cloudflare Workers 무료 플랜은 요청당 CPU 시간 10ms, 외부 호출(subrequest) 50개로 제한된다 (응답 대기 시간은 CPU에 안 들어감, 2026-11 공식 문서 기준). 자동 수집은 `budget.ts`로 외부 호출을 세고, 목표를 하루 3개로 줄여 이 한도에 맞춘다.
 - Firebase Storage 5GB 무료 한계 모니터링 (초과 시 월 ~$2 추가 비용).
@@ -220,11 +221,15 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 배포 환경: Cloudflare 대시보드 > church-games > Settings > **Variables and Secrets**(런타임)에 Secret으로 넣는다. Build 아래의 변수는 빌드 때만 보여서 SSR에서 못 읽는다. `npx wrangler secret list`로 확인.
 - 값을 바꾸면 이미 만들어진 미리보기 버전에는 반영되지 않는다. 브랜치에 다시 push해서 새로 빌드한다.
 ```
-# Neon (Next.js 서버, Cloudflare Workers, GitHub Actions 공통)
+# Neon (Next.js 서버, Cloudflare Workers 공통)
 DATABASE_URL=postgresql://user:password@...
 
 # Better Auth 세션 서명 키 (openssl rand -base64 32). 운영은 Cloudflare Secret에 이미 있음
 BETTER_AUTH_SECRET=...
+
+# 자동 수집 검색 API (로컬 dry-run, 나중에 수집 Worker Secret)
+KAKAO_REST_API_KEY=...   # Kakao Developers > 앱 > 플랫폼 키 > REST API 키 (카카오 로그인에도 쓰는 키)
+YOUTUBE_API_KEY=...      # Google Cloud, YouTube Data API v3만 허용하도록 제한
 
 # Firebase Storage (예정)
 FIREBASE_STORAGE_BUCKET=...
