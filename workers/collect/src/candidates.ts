@@ -47,20 +47,25 @@ export async function findCandidates(
   const dropped: Dropped[] = [];
 
   for (const c of found) {
-    const text = `${c.title} ${c.snippet} ${c.author ?? ""}`;
     const reason: string | undefined = inRun.has(c.link)
       ? "중복"
       : seen.has(c.link)
         ? "이미 본 글"
         : c.publishedAt && c.publishedAt < minDate
           ? "오래된 글"
-          : (findBlocked(text) ?? (looksLikeInjection(text) ? "주입 의심" : looksLikeGame(text) ? undefined : "게임 말 없음"));
+          : contentDropReason(c);
     inRun.add(c.link);
     if (reason) dropped.push({ candidate: c, reason });
     else kept.push(c);
   }
 
   return { candidates: interleaveBySource(kept), dropped, errors, searched: searches.length };
+}
+
+// 글 내용으로 거를 이유 (거를 말 → 주입 흔적 → 게임 말 없음 순서). 없으면 undefined
+export function contentDropReason(c: Pick<Candidate, "title" | "snippet" | "author">): string | undefined {
+  const text = `${c.title} ${c.snippet} ${c.author ?? ""}`;
+  return findBlocked(text) ?? (looksLikeInjection(text) ? "주입 의심" : looksLikeGame(text) ? undefined : "게임 말 없음");
 }
 
 // 블로그·유튜브를 번갈아 놓는다. 각 출처 안에서는 최신순
