@@ -23,7 +23,8 @@ export type FindResult = {
 export async function findCandidates(
   env: CollectEnv,
   budget: SubrequestBudget,
-  opts: { seen?: Set<string>; now?: Date } = {},
+  // filterUnseen: 거르기를 마친 후보 링크 중 아직 안 본 것만 돌려준다 (Worker는 DB에 1번 물어봄, dry-run은 없음)
+  opts: { filterUnseen?: (links: string[]) => Promise<Set<string>>; now?: Date } = {},
 ): Promise<FindResult> {
   const searches = [
     ...SEARCH_KEYWORDS.blog.map((k) => () => searchDaumBlog(k, env.KAKAO_REST_API_KEY, budget.fetch)),
@@ -40,7 +41,6 @@ export async function findCandidates(
     else errors.push(`검색 실패 (${r.reason instanceof Error ? r.reason.name : "알 수 없는 오류"})`);
   }
 
-  const seen = opts.seen ?? new Set<string>();
   const minDate = new Date((opts.now ?? new Date()).getTime() - MAX_AGE_DAYS * 86_400_000).toISOString().slice(0, 10);
   const inRun = new Set<string>();
   const kept: Candidate[] = [];
@@ -49,17 +49,23 @@ export async function findCandidates(
   for (const c of found) {
     const reason: string | undefined = inRun.has(c.link)
       ? "중복"
-      : seen.has(c.link)
-        ? "이미 본 글"
-        : c.publishedAt && c.publishedAt < minDate
-          ? "오래된 글"
-          : contentDropReason(c);
+      : c.publishedAt && c.publishedAt < minDate
+        ? "오래된 글"
+        : contentDropReason(c);
     inRun.add(c.link);
     if (reason) dropped.push({ candidate: c, reason });
     else kept.push(c);
   }
 
-  return { candidates: interleaveBySource(kept), dropped, errors, searched: searches.length };
+  // 이미 본 글은 코드 거르기를 마친 뒤 한 번에 묻는다 (물어볼 링크 수와 DB 호출을 줄이려고)
+  let fresh = kept;
+  if (opts.filterUnseen && kept.length) {
+    const unseen = await opts.filterUnseen(kept.map((c) => c.link));
+    fresh = kept.filter((c) => unseen.has(c.link));
+    for (const c of kept) if (!unseen.has(c.link)) dropped.push({ candidate: c, reason: "이미 본 글" });
+  }
+
+  return { candidates: interleaveBySource(fresh), dropped, errors, searched: searches.length };
 }
 
 // 글 내용으로 거를 이유 (거를 말 → 주입 흔적 → 게임 말 없음 순서). 없으면 undefined

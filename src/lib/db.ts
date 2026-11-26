@@ -1,4 +1,5 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
+import { newGameId } from "./game-id";
 import type { Game, GameInput, ModerationGame, ReviewStatus } from "./types";
 
 // Neon HTTP 드라이버: 요청마다 HTTP로 쿼리해서 Cloudflare Workers처럼 연결을 오래 못 잡는 환경에 맞아요.
@@ -122,13 +123,6 @@ export async function updateAdminNotes(id: string, notes: string | null): Promis
 }
 
 // ── 관리자 등록·수정 ──
-
-// 주소에 쓰는 id. 헷갈리는 글자(0·o, 1·l)는 뺀다. 등록 후에는 바꾸지 않는다 (링크가 깨지지 않게)
-const ID_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
-function newGameId() {
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
-  return "g-" + Array.from(bytes, (b) => ID_CHARS[b % ID_CHARS.length]).join("");
-}
 
 // 새 게임은 대기(pending, DB 기본값)로 시작해 심의 화면에서 승인해야 공개된다
 export async function createGame(input: GameInput, createdBy: string): Promise<{ id: string; status: ReviewStatus }> {

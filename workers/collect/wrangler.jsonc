@@ -1,0 +1,16 @@
+// 수집 전용 Worker. 사이트 Worker(church-games)와 나눠서, 여기에는 수집 키와 수집 전용 DB 계정만 넣는다 (decisions 2026-11-25)
+// 배포는 수동: npm run collect:deploy  /  Secret: npx wrangler secret put <이름> -c workers/collect/wrangler.jsonc
+// Secret 4개: KAKAO_REST_API_KEY, YOUTUBE_API_KEY, ANTHROPIC_API_KEY, COLLECT_DATABASE_URL
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "church-games-collect",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // 공개 주소를 두지 않는다. cron으로만 돈다
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  // cron은 심의 화면의 'AI 초안' 표시(PR ②)를 병합한 뒤 켠다: ["0 21 * * *"] (매일 06:00 KST)
+  "triggers": { "crons": [] }
+}

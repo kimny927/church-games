@@ -88,6 +88,9 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run collect:dry-run`: 자동 수집을 로컬에서 돌려 후보·거른 글·AI 초안·AI가 버린 글과 비용을 출력 (DB에 안 씀, `.env.local`의 검색 API 키·`ANTHROPIC_API_KEY` 사용)
 - `npm run test:collect`: 자동 수집의 글 정리·거르기·주소 맞추기·AI 출력 검사·통과 조건 테스트 (키 없이 돎, AI는 가짜 응답). 거르기 규칙이나 프롬프트를 바꾸면 반드시 돌린다
 - `npm run collect:redteam`: 공격 글 15개를 코드 거르기 → 실제 Haiku → 출력 검사로 돌려 어디에서 걸렸는지 표로 출력 (호출 15번 이하, 1센트 아래). 프롬프트나 거르기 규칙을 바꾸면 돌린다
+- `npm run collect:dev`: 수집 Worker를 로컬에서 띄움 (`wrangler dev --test-scheduled`, `workers/collect/.dev.vars` 필요). 다른 터미널에서 `curl http://localhost:8787/__scheduled`로 한 번 돌린다. **실제 DB에 대기 게임을 넣으므로 Neon 테스트 브랜치 주소로**
+- `npm run collect:deploy`: 수집 Worker 수동 배포 (사이트와 달리 자동 배포하지 않음). Secret은 `npx wrangler secret put <이름> -c workers/collect/wrangler.jsonc`
+- `npm run collect:db-check`: 수집 전용 DB 계정(collector)이 함수 2개만 실행하고 표는 읽거나 쓰지 못하는지 시험 (`.env.local`의 `COLLECT_DATABASE_URL`, DB에 아무것도 남기지 않음). `neon/collect.sql`을 실행하거나 고친 뒤 돌린다
 - `npx tsx --env-file=.env.local scripts/auth-sql.mts > neon/auth.sql`: Better Auth 테이블 SQL 생성 (DB는 읽기만, Better Auth 업그레이드 후 다시 실행)
 - `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일> [닉네임]`: 첫 최고 관리자 생성, 임시 비밀번호 출력 (닉네임을 빼면 이메일 앞부분)
 - `scripts/test-admin-auth.sh`: 관리자 인증·권한 시나리오 테스트. `npm run preview`를 띄운 뒤 실행 (`@test.local` 테스트 계정을 만들고 끝나면 지움). 인증·권한을 바꾼 PR마다 돌린다
@@ -138,7 +141,12 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - 통과 조건(`judge`): 게임 && 의심 아님 && 확신 0.7 이상(문턱으로만) && 출력 검사 통과. 이름·링크·썸네일은 후보에서
 - `output-check.ts`: AI 출력의 링크·도메인·전화·이메일·오픈채팅·@아이디, 거를 말, 주입 흔적, 길이(소개글 20~200자, 준비물 100자)를 검사해 걸리면 버린다 (고치지 않음)
 - 오류는 우리가 만든 메시지나 종류만 남긴다 (요청 주소·응답 본문·비밀값을 로그에 남기지 않음)
-- 다음 PR: Worker·cron·`collect_seen`·수집 전용 DB 계정, 대기로 저장(`auto_scraped` true), 심의 화면 'AI 초안' 표시
+- `index.ts`: Worker 진입점(`scheduled`). 검색 → 거르기 → 안 본 글만 → AI → 저장. 로그에는 개수·호출 수·토큰만 (글 제목·링크·비밀값 X). AI가 판단한 글만 '본 글'로 남기고 호출 오류는 다음 날 다시
+- `store.ts`: 수집 전용 계정(collector)으로 `collect_unseen`·`collect_record`만 부른다. 초안의 심의 참고 정보(원문 요약·검색어·확신도·글 날짜)는 `collect_meta`에. 오류는 Postgres 코드만 남긴다
+- `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron은 PR ②에서 켬(`0 21 * * *`, 06:00 KST). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
+- `src/lib/game-id.ts`: 게임 id 생성. 사이트(`db.ts`)와 수집 Worker가 같이 쓴다
+- 3단계 PR ①(`feat/collect-worker`, 만드는 중): 위 Worker·DB. 남은 일은 `neon/collect.sql`을 Neon 테스트 브랜치에서 실행 → `collect:db-check` → `collect:dev`로 확인
+- 다음 PR ②(`feat/moderation-ai-draft`): 심의 세부에 'AI 초안'과 원문 요약 나란히, 자동 수집 게임 승인 전 '원본 확인' 체크박스(서버에서도 확인), cron 켜고 배포 후 CPU 10ms 측정
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build
@@ -205,7 +213,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 ## 지켜야 할 것
 - 외부 게임은 원본 내용을 복사하지 않고 '요약 + 원본 링크'로 소개한다 (저작권).
 - 모바일 화면에서 먼저 확인한다 (사용자는 주로 휴대폰으로 볼 것).
-- 비밀키(Neon DB 연결, Firebase API 키 등)는 절대 커밋하지 않는다. `.env.local` 또는 Cloudflare 런타임 Secret 사용.
+- 비밀키(Neon DB 연결, Firebase API 키 등)는 절대 커밋하지 않는다. `.env.local`, `workers/collect/.dev.vars`(둘 다 gitignore) 또는 Cloudflare 런타임 Secret 사용.
 - 스크래핑할 때 각 사이트의 `robots.txt`와 이용약관 확인 (무단 크롤링 방지).
 - 자동 수집은 공식 API(검색 API·RSS) 우선, HTML 파싱은 최후의 수단 (부하 고려). 지금은 페이지를 직접 가져오지 않는다 (썸네일도 검색 API가 주는 것).
 - 자동 수집 글은 믿을 수 없는 데이터다. AI에는 제목과 짧은 요약만 넣고, AI 판단은 후보를 버리는 데만 쓴다 (통과시키지 않음). 링크·이름·순서는 코드가 정한다.
@@ -214,6 +222,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 ## Neon DB 스키마 (`neon/schema.sql`)
 - 지금은 `games` 테이블만 있다. 회원·댓글·후기는 로그인 방식을 정하는 4주차에 추가.
+- 자동 수집용(`neon/collect.sql`, **운영 DB에는 아직 실행 전**): `collect_seen`(AI까지 보낸 글의 링크·결과), `games.collect_meta`(jsonb, 심의 참고, 관리자 화면만), 함수 `collect_unseen`·`collect_record`(security definer, 상태 `pending`·`auto_scraped` true 고정, 한 번에 3개까지), 계정 `collector`(함수 2개 실행 권한만, 콘솔이 아니라 SQL로 만듦)
 - 심의 칼럼: `status`('pending'/'approved'/'rejected'), `auto_scraped`(A방식 false / B방식 true), `created_by`(등록한 관리자), `approved_by`, `approved_at`, `rejection_reason`(거절 시 필수, DB 제약조건), `admin_notes`, `updated_at`(트리거로 자동 갱신)
 - 원본 링크는 `link` 칼럼 (별도 `source_url` 없음)
 - 썸네일은 `thumbnail_url` 칼럼. 원본 사이트의 이미지 주소만 저장하고 파일은 복사하지 않는다 (사용자 카드·상세는 있을 때만, 관리자 심의 세부는 없으면 '썸네일 없음')
@@ -234,7 +243,9 @@ BETTER_AUTH_SECRET=...
 # 자동 수집 검색 API (로컬 dry-run, 나중에 수집 Worker Secret)
 KAKAO_REST_API_KEY=...   # Kakao Developers > 앱 > 플랫폼 키 > REST API 키 (카카오 로그인에도 쓰는 키)
 YOUTUBE_API_KEY=...      # Google Cloud, YouTube Data API v3만 허용하도록 제한
-ANTHROPIC_API_KEY=...    # Claude Console > API Keys (sk-ant-api03-로 시작). 수집 전용 키, Console에서 월 사용 한도 설정
+ANTHROPIC_API_KEY=...    # Claude Console > API Keys (sk-ant-로 시작, 워크스페이스 ID wrkspc_ 아님). 수집 전용 키, Console에서 월 사용 한도 설정
+COLLECT_DATABASE_URL=... # 수집 전용 DB 계정(collector) 연결 문자열 (neon/collect.sql). collect:db-check용, 시험은 Neon 브랜치 주소로
+# 수집 Worker를 로컬에서 돌릴 때(collect:dev)는 위 4개(KAKAO·YOUTUBE·ANTHROPIC·COLLECT_DATABASE_URL)를 workers/collect/.dev.vars에, 배포는 수집 Worker Secret에
 
 # Firebase Storage (예정)
 FIREBASE_STORAGE_BUCKET=...

@@ -14,7 +14,10 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "collect:redteam": "tsx --env-file=.env.local scripts/collect-redteam.mts"
+    "collect:redteam": "tsx --env-file=.env.local scripts/collect-redteam.mts",
+    "collect:dev": "wrangler dev -c workers/collect/wrangler.jsonc --test-scheduled",
+    "collect:deploy": "wrangler deploy -c workers/collect/wrangler.jsonc",
+    "collect:db-check": "tsx --env-file=.env.local scripts/collect-db-check.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",

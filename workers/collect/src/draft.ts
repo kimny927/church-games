@@ -102,7 +102,8 @@ function describeError(e: unknown) {
 }
 
 export type GameDraft = GameInput & { candidate: Candidate; confidence: number };
-export type DraftDropped = { candidate: Candidate; reason: string };
+// error: AI 판단이 아니라 호출 실패로 버림. 이런 글은 '본 글'로 남기지 않아 다음 날 다시 시도한다
+export type DraftDropped = { candidate: Candidate; reason: string; error?: true };
 export type DraftResult = { drafts: GameDraft[]; dropped: DraftDropped[]; calls: number; usage: Usage; stopped?: string };
 
 export async function draftGames(candidates: Candidate[], ask: AskModel, budget: SubrequestBudget): Promise<DraftResult> {
@@ -131,7 +132,7 @@ export async function draftGames(candidates: Candidate[], ask: AskModel, budget:
     }
     const reason = r.ok ? judge(r.draft) : r.reason;
     if (reason) {
-      dropped.push({ candidate: c, reason });
+      dropped.push({ candidate: c, reason, ...(!r.ok && r.error && { error: true as const }) });
       if (!r.ok && r.fatal) {
         stopped = reason; // 키가 틀렸으면 남은 호출도 다 실패한다. 예산을 아끼려고 멈춘다
         break;
