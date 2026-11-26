@@ -85,8 +85,9 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run preview`: Cloudflare Workers 런타임으로 로컬 실행 (배포 환경에서만 생기는 문제 확인용)
 - `npm run deploy`: 수동 배포 (평소에는 main 병합 시 자동 배포)
 - `npm run db:check`: Neon 연결 확인 (`.env.local`의 `DATABASE_URL` 사용, 상태별 게임 개수 출력)
-- `npm run collect:dry-run`: 자동 수집을 로컬에서 돌려 후보·거른 글만 출력 (DB에 안 씀, `.env.local`의 검색 API 키 사용)
-- `npm run test:collect`: 자동 수집의 글 정리·거르기·주소 맞추기 테스트 (키 없이 돎). 거르기 규칙을 바꾸면 반드시 돌린다
+- `npm run collect:dry-run`: 자동 수집을 로컬에서 돌려 후보·거른 글·AI 초안·AI가 버린 글과 비용을 출력 (DB에 안 씀, `.env.local`의 검색 API 키·`ANTHROPIC_API_KEY` 사용)
+- `npm run test:collect`: 자동 수집의 글 정리·거르기·주소 맞추기·AI 출력 검사·통과 조건 테스트 (키 없이 돎, AI는 가짜 응답). 거르기 규칙이나 프롬프트를 바꾸면 반드시 돌린다
+- `npm run collect:redteam`: 공격 글 15개를 코드 거르기 → 실제 Haiku → 출력 검사로 돌려 어디에서 걸렸는지 표로 출력 (호출 15번 이하, 1센트 아래). 프롬프트나 거르기 규칙을 바꾸면 돌린다
 - `npx tsx --env-file=.env.local scripts/auth-sql.mts > neon/auth.sql`: Better Auth 테이블 SQL 생성 (DB는 읽기만, Better Auth 업그레이드 후 다시 실행)
 - `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일> [닉네임]`: 첫 최고 관리자 생성, 임시 비밀번호 출력 (닉네임을 빼면 이메일 앞부분)
 - `scripts/test-admin-auth.sh`: 관리자 인증·권한 시나리오 테스트. `npm run preview`를 띄운 뒤 실행 (`@test.local` 테스트 계정을 만들고 끝나면 지움). 인증·권한을 바꾼 PR마다 돌린다
@@ -133,8 +134,11 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `rules.ts`: 검색 키워드, 거를 말(이단·광고), 게임 관련 말(없으면 거름), 주입 흔적 패턴. 이단 단체 이름은 심의에서 발견할 때마다 추가한다. `candidates.ts`: 검색 → 주소 맞추기 → 거르기 → 순서(출처를 번갈아 최신순, AI 확신도로 정하지 않음)
 - `text.ts`: 태그·엔티티·안 보이는 문자 제거, NFKC. 비교용 `compact`(붙여 씀, 우회 잡기)·`spaced`(짧은 낱말은 낱말 시작에서만)
 - `url.ts`: 네이버 블로그·유튜브 주소를 한 모양으로 (중복 확인). `budget.ts`: 외부 호출 예산 40 (무료 플랜 50)
+- `draft.ts`: Claude Haiku(`claude-haiku-5-5`, effort low)가 후보 하나씩 게임 여부·선택지·소개글·준비물을 구조화 출력(zod)으로 낸다. 받을 게임 범위는 프롬프트(`SYSTEM`)에서 정한다(교회 모임 전반, 어르신 포함). 호출은 `budget.fetch`로 세고 재시도 0, 최대 10번, 통과 3개면 멈춤, 키 오류면 바로 멈춤. 선택지는 `src/lib/types.ts`의 `FILTERS`를 그대로 쓴다
+  - 통과 조건(`judge`): 게임 && 의심 아님 && 확신 0.7 이상(문턱으로만) && 출력 검사 통과. 이름·링크·썸네일은 후보에서
+- `output-check.ts`: AI 출력의 링크·도메인·전화·이메일·오픈채팅·@아이디, 거를 말, 주입 흔적, 길이(소개글 20~200자, 준비물 100자)를 검사해 걸리면 버린다 (고치지 않음)
 - 오류는 우리가 만든 메시지나 종류만 남긴다 (요청 주소·응답 본문·비밀값을 로그에 남기지 않음)
-- 다음 PR: Claude Haiku 초안과 출력 검사, Worker·cron·`collect_seen`·수집 전용 DB 계정
+- 다음 PR: Worker·cron·`collect_seen`·수집 전용 DB 계정, 대기로 저장(`auto_scraped` true), 심의 화면 'AI 초안' 표시
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build
@@ -230,6 +234,7 @@ BETTER_AUTH_SECRET=...
 # 자동 수집 검색 API (로컬 dry-run, 나중에 수집 Worker Secret)
 KAKAO_REST_API_KEY=...   # Kakao Developers > 앱 > 플랫폼 키 > REST API 키 (카카오 로그인에도 쓰는 키)
 YOUTUBE_API_KEY=...      # Google Cloud, YouTube Data API v3만 허용하도록 제한
+ANTHROPIC_API_KEY=...    # Claude Console > API Keys (sk-ant-api03-로 시작). 수집 전용 키, Console에서 월 사용 한도 설정
 
 # Firebase Storage (예정)
 FIREBASE_STORAGE_BUCKET=...
