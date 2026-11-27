@@ -25,6 +25,7 @@ create table games (
   -- 심의
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
   auto_scraped boolean not null default false, -- false: 직접 입력(반자동), true: 자동 수집
+  collect_meta jsonb,                        -- 자동 수집 심의 참고(원문 요약·검색어·AI 확신도·글 날짜), 관리자 화면만. 2026-11-27 추가: neon/collect.sql
   created_by text,                           -- 등록한 운영자 (자동 수집이면 비어 있음). 2026-11-21 추가: alter table games add column created_by text;
   approved_by text,                          -- 심의한 운영자. 회원 테이블이 생기면 참조로 바꿈
   approved_at timestamptz,
