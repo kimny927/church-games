@@ -63,7 +63,8 @@ end $$;
 
 -- ── 3. 수집 전용 계정 ──
 -- 콘솔의 Roles 화면에서 만들면 neon_superuser에 들어가 권한이 넓어진다. 그래서 SQL로 만든다.
--- 비밀번호는 터미널에서 `openssl rand -base64 32`로 만들어 아래에 넣고, 실행한 뒤 SQL Editor 기록에서 지운다.
+-- 비밀번호는 별도 터미널에서 `openssl rand -hex 32`로 만들어 아래에 넣고, 실행한 뒤 SQL Editor 기록에서 지운다.
+-- (hex는 연결 문자열에서 인코딩할 문자가 없다. Claude Code의 `!`로 만들면 대화 기록에 남으니 쓰지 않는다)
 -- create role collector with login password '여기에-비밀번호';
 
 -- 함수는 기본으로 누구나(PUBLIC) 실행할 수 있다. 먼저 빼고 collector에게만 준다
