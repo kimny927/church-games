@@ -145,7 +145,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `store.ts`: 수집 전용 계정(collector)으로 `collect_unseen`·`collect_record`만 부른다. 초안의 심의 참고 정보(원문 요약·검색어·확신도·글 날짜)는 `collect_meta`에. 오류는 Postgres 코드만 남긴다
 - `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron은 PR ②에서 켬(`0 21 * * *`, 06:00 KST). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
 - `src/lib/game-id.ts`: 게임 id 생성. 사이트(`db.ts`)와 수집 Worker가 같이 쓴다
-- 3단계 PR ①(`feat/collect-worker`, 만드는 중): 위 Worker·DB. 남은 일은 `neon/collect.sql`을 Neon 테스트 브랜치에서 실행 → `collect:db-check` → `collect:dev`로 확인
+- 3단계 PR ①(`feat/collect-worker`, 만드는 중): 위 Worker·DB. Neon 테스트 브랜치(`collect-test`)에서 확인 끝(2026-11-28: db-check 12개 통과, collect:dev 2번 실행). 병합 후 운영 DB에 `neon/collect.sql` → `collect:db-check`(운영 주소) → Secret 4개 → `collect:deploy`(cron 없음)
 - 다음 PR ②(`feat/moderation-ai-draft`): 심의 세부에 'AI 초안'과 원문 요약 나란히, 자동 수집 게임 승인 전 '원본 확인' 체크박스(서버에서도 확인), cron 켜고 배포 후 CPU 10ms 측정
 
 **GitHub Actions:**
