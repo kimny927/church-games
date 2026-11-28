@@ -119,6 +119,23 @@ export async function reviewGame(args: {
   return rows.length > 0;
 }
 
+// 승인된 게임을 대기로 되돌린다. 승인 기록(approved_by·approved_at)은 비우고, 사유는 칼럼 대신 메모 끝에 한 줄 덧붙인다
+// (decisions 2026-11-28). 상태 확인·메모 덧붙이기·길이 확인을 한 문장에서 해서 그 사이 다른 관리자의 처리나 메모가 끼지 않는다
+export async function revertToPending(args: { id: string; noteLine: string; maxNotes: number }): Promise<"ok" | "changed" | "too_long"> {
+  const { id, noteLine, maxNotes } = args;
+  const rows = await sql()`
+    update games
+    set status = 'pending', approved_by = null, approved_at = null, rejection_reason = null,
+        admin_notes = case when coalesce(admin_notes, '') = '' then ${noteLine}::text else admin_notes || E'\n' || ${noteLine}::text end
+    where id = ${id} and status = 'approved'
+      and char_length(coalesce(admin_notes, '')) + 1 + char_length(${noteLine}::text) <= ${maxNotes}::int
+    returning id`;
+  if (rows.length > 0) return "ok";
+  // 바뀌지 않은 이유를 구분한다: 이미 승인 상태가 아니면 다른 관리자가 먼저 처리한 것, 아니면 메모가 꽉 찬 것
+  const [row] = await sql()`select status from games where id = ${id}`;
+  return row?.status === "approved" ? "too_long" : "changed";
+}
+
 // 승인 전 '원본 확인'이 필요한지 판단할 때. 폼 값이 아니라 DB를 믿는다
 export async function isAutoScraped(id: string): Promise<boolean> {
   const rows = await sql()`select auto_scraped from games where id = ${id}`;

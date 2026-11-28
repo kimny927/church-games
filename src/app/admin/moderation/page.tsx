@@ -9,8 +9,12 @@ export const dynamic = "force-dynamic";
 
 const TABS: ReviewStatus[] = ["pending", "approved", "rejected"];
 
-// 세부 페이지에서 승인·거절에 성공하면 ?done=approved|rejected 로 돌아온다
-const DONE_MESSAGE: Record<string, string> = { approved: "승인되었습니다.", rejected: "거절되었습니다." };
+// 세부 페이지에서 승인·거절·대기로 되돌리기에 성공하면 ?done=approved|rejected|pending 으로 돌아온다
+const DONE_MESSAGE: Record<string, string> = {
+  approved: "승인되었습니다.",
+  rejected: "거절되었습니다.",
+  pending: "대기로 되돌렸습니다.",
+};
 
 // 심의 목록: 대상 게임을 보여 주기만 한다. 승인·거절은 세부 페이지(/admin/moderation/[id])에서
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ status?: string; done?: string }> }) {

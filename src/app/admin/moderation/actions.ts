@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { requireAdmin } from "@/lib/admin";
-import { isAutoScraped, reviewGame, updateAdminNotes } from "@/lib/db";
+import { isAutoScraped, revertToPending, reviewGame, updateAdminNotes } from "@/lib/db";
 import type { ReviewStatus } from "@/lib/types";
 
 const MAX_REASON = 500;
@@ -51,6 +51,33 @@ export async function rejectGame(_: ActionState, form: FormData): Promise<Action
   if (!reason) return { ok: false, message: "거절 사유를 적어 주세요." };
   if (reason.length > MAX_REASON) return { ok: false, message: `거절 사유는 ${MAX_REASON}자까지 쓸 수 있어요.` };
   return review("rejected", form, reason);
+}
+
+// 서울 날짜 YYYY-MM-DD (en-CA 형식이 이 모양이다)
+const seoulDate = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+
+// 승인 → 대기. owner·admin 모두 가능. 사유는 칼럼 대신 메모 끝에 '[대기로 되돌림 날짜 닉네임] 사유'로 남긴다 (decisions 2026-11-28)
+// 대기로 돌아간 자동 수집 게임을 다시 승인할 때는 approveGame의 '원본 확인' 규칙이 그대로 적용된다
+export async function revertGame(_: ActionState, form: FormData): Promise<ActionState> {
+  const { user } = await requireAdmin({ fresh: true });
+  const id = String(form.get("id"));
+  const from = String(form.get("from"));
+  if (from !== "approved") return { ok: false, message: "할 수 없는 상태 변경이에요." };
+
+  // 메모가 한 줄 기록으로 남도록 줄바꿈·연속 공백은 공백 하나로
+  const reason = String(form.get("reason") ?? "").replace(/\s+/g, " ").trim();
+  if (!reason) return { ok: false, message: "대기로 되돌리는 사유를 적어 주세요." };
+  if (reason.length > MAX_REASON) return { ok: false, message: `사유는 ${MAX_REASON}자까지 쓸 수 있어요.` };
+
+  const noteLine = `[대기로 되돌림 ${seoulDate()} ${user.name || "관리자"}] ${reason}`;
+  const result = await revertToPending({ id, noteLine, maxNotes: MAX_NOTES });
+  if (result === "changed") return { ok: false, message: ALREADY_DONE };
+  if (result === "too_long") {
+    return { ok: false, message: `메모가 ${MAX_NOTES}자를 넘게 돼요. 메모를 줄여 저장한 뒤 다시 해 주세요.` };
+  }
+  revalidatePath("/admin/moderation");
+  revalidatePath("/admin");
+  redirect(`/admin/moderation?status=approved&done=pending`);
 }
 
 export async function saveNotes(_: ActionState, form: FormData): Promise<ActionState> {
