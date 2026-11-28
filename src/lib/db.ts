@@ -100,6 +100,56 @@ export async function countGamesByStatus(): Promise<Record<ReviewStatus, number>
   return counts;
 }
 
+// ── 자동 수집 켜기/끄기 (neon/collect-settings.sql, requireAdmin 뒤에서만) ──
+
+export type CollectRun = { ranAt: Date; status: "ok" | "off" | "failed"; summary: Record<string, unknown> | null };
+export type CollectStatus =
+  | { ready: false } // collect-settings.sql 실행 전 (사이트는 병합 즉시 배포되고 SQL은 그 뒤에 실행해서)
+  | {
+      ready: true;
+      enabled: boolean;
+      updatedBy?: string; // 닉네임 (계정이 지워졌으면 없음)
+      updatedAt?: Date;
+      lastCollectedAt?: Date; // 마지막으로 실제 수집한(ok) 시각
+      pendingAuto: number; // 심의 대기 중인 자동 수집 게임
+      runs: CollectRun[]; // 최근 7개
+    };
+
+const UNDEFINED_TABLE = "42P01";
+
+export async function getCollectStatus(): Promise<CollectStatus> {
+  try {
+    const [settings, runs, counts] = await Promise.all([
+      sql()`select s.enabled, s.updated_at, u.name as updated_by from collect_settings s left join "user" u on u.id = s.updated_by where s.id`,
+      sql()`select ran_at, status, summary from collect_runs order by ran_at desc, id desc limit 7`,
+      sql()`select
+              (select max(ran_at) from collect_runs where status = 'ok') as last_ok,
+              (select count(*)::int from games where status = 'pending' and auto_scraped) as pending_auto`,
+    ]);
+    const s = settings[0];
+    return {
+      ready: true,
+      enabled: s?.enabled === true, // 줄이 없으면 꺼짐 (collect_enabled()와 같게)
+      updatedBy: (s?.updated_by as string) ?? undefined,
+      updatedAt: (s?.updated_at as Date) ?? undefined,
+      lastCollectedAt: (counts[0].last_ok as Date) ?? undefined,
+      pendingAuto: counts[0].pending_auto as number,
+      runs: runs.map((r) => ({ ranAt: r.ran_at as Date, status: r.status as CollectRun["status"], summary: (r.summary as Record<string, unknown>) ?? null })),
+    };
+  } catch (e) {
+    if ((e as { code?: string }).code === UNDEFINED_TABLE) return { ready: false };
+    throw e;
+  }
+}
+
+// 켤지 끌지를 값으로 받는다 (두 번 눌러도 결과가 같게). 바뀐 줄이 없으면 false (SQL 실행 전)
+export async function setCollectEnabled(enabled: boolean, userId: string): Promise<boolean> {
+  const rows = await sql()`
+    update collect_settings set enabled = ${enabled}, updated_by = ${userId}, updated_at = now()
+    where id returning id`;
+  return rows.length > 0;
+}
+
 // 심의 결과 기록. 화면을 본 시점의 상태(from)일 때만 바꿔서, 다른 관리자가 먼저 처리했으면 false
 // approved_by 는 거절할 때도 '심의한 사람'. 승인하면 거절 사유는 비운다 (지금 상태의 사유만 남김)
 export async function reviewGame(args: {

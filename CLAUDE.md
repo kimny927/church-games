@@ -88,9 +88,9 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `npm run collect:dry-run`: 자동 수집을 로컬에서 돌려 후보·거른 글·AI 초안·AI가 버린 글과 비용을 출력 (DB에 안 씀, `.env.local`의 검색 API 키·`ANTHROPIC_API_KEY` 사용)
 - `npm run test:collect`: 자동 수집의 글 정리·거르기·주소 맞추기·AI 출력 검사·통과 조건 테스트 (키 없이 돎, AI는 가짜 응답). 거르기 규칙이나 프롬프트를 바꾸면 반드시 돌린다
 - `npm run collect:redteam`: 공격 글 15개를 코드 거르기 → 실제 Haiku → 출력 검사로 돌려 어디에서 걸렸는지 표로 출력 (호출 15번 이하, 1센트 아래). 프롬프트나 거르기 규칙을 바꾸면 돌린다
-- `npm run collect:dev`: 수집 Worker를 로컬에서 띄움 (`wrangler dev --test-scheduled`, `workers/collect/.dev.vars` 필요). 다른 터미널에서 `curl http://localhost:8787/__scheduled`로 한 번 돌린다. **실제 DB에 대기 게임을 넣으므로 Neon 테스트 브랜치 주소로**
+- `npm run collect:dev`: 수집 Worker를 로컬에서 띄움 (`wrangler dev --test-scheduled`, `workers/collect/.dev.vars` 필요). 다른 터미널에서 `curl http://localhost:8787/__scheduled`로 한 번 돌린다. **실제 DB에 대기 게임을 넣으므로 Neon 테스트 브랜치 주소로**. 꺼져 있으면 'off'만 기록하고 끝나므로, 시험하려면 그 브랜치에서 `update collect_settings set enabled = true`
 - `npm run collect:deploy`: 수집 Worker 수동 배포 (사이트와 달리 자동 배포하지 않음). Secret은 `npx wrangler secret put <이름> -c workers/collect/wrangler.jsonc`
-- `npm run collect:db-check`: 수집 전용 DB 계정(collector)이 함수 2개만 실행하고 표는 읽거나 쓰지 못하는지 시험 (`.env.local`의 `COLLECT_DATABASE_URL`, DB에 아무것도 남기지 않음). `neon/collect.sql`을 실행하거나 고친 뒤 돌린다
+- `npm run collect:db-check`: 수집 전용 DB 계정(collector)이 함수 4개만 실행하고 표는 읽거나 쓰지 못하는지 시험 (`.env.local`의 `COLLECT_DATABASE_URL`, DB에 아무것도 남기지 않음). `neon/collect.sql`·`neon/collect-settings.sql`을 실행하거나 고친 뒤 돌린다
 - `npx tsx --env-file=.env.local scripts/auth-sql.mts > neon/auth.sql`: Better Auth 테이블 SQL 생성 (DB는 읽기만, Better Auth 업그레이드 후 다시 실행)
 - `npx tsx --env-file=.env.local scripts/admin-create-owner.mts <이메일> [닉네임]`: 첫 최고 관리자 생성, 임시 비밀번호 출력 (닉네임을 빼면 이메일 앞부분)
 - `scripts/test-admin-auth.sh`: 관리자 인증·권한 시나리오 테스트. `npm run preview`를 띄운 뒤 실행 (`@test.local` 테스트 계정을 만들고 끝나면 지움). 인증·권한을 바꾼 PR마다 돌린다
@@ -125,6 +125,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
   - 다시 심의하기(승인 → 대기, 사유 선택): `db.ts`의 `revertToPending`이 승인 기록(`approved_by`·`approved_at`)을 비우고 `admin_notes` 끝에 `[다시 심의 날짜 닉네임] 사유`를 덧붙인다(사유가 없어도 누가·언제는 남김·칼럼 없음, 메모 2000자 넘으면 거절). 자동 수집 게임을 다시 승인할 때는 '원본 확인'이 다시 필요하다
   - 자동 수집 게임: 썸네일 아래 소개글(사용자에게 보이는 글, 'AI 추천 문구 그대로/관리자가 고침' 표시)과 'AI 초안' 상자(`CollectDraft.tsx`, 원문 요약과 AI 추천 문구 나란히·검색어·확신도)를 보여 주고, 승인·다시 승인은 '원본 글을 직접 확인했어요' 체크가 있어야 한다. 서버 액션은 체크가 없으면 DB의 `auto_scraped`로 다시 확인한다 (`isAutoScraped`). 거절·내리기는 막지 않음. `CollectMeta` 타입은 `src/lib/types.ts`(수집 Worker와 같이 씀)
   - 성공하면 원래 목록 탭으로 돌아가 '승인되었습니다/거절되었습니다/다시 심의 대기로 옮겼습니다' 알림(`?done=`), 실패하면 세부에 머물며 팝업
+- `src/app/admin/collect/`: 자동 수집 켜기/끄기 (owner·admin, 켤 때만 확인 팝업 `CollectToggle.tsx`)·마지막 수집·자동 수집 대기 수·최근 실행 7개. `db.ts`의 `getCollectStatus`는 `collect-settings.sql` 실행 전(표 없음)이면 `{ ready: false }`로 안내만, 관리자 홈은 상태를 못 읽어도 그대로
 - `src/app/admin/games/`: 게임 등록(`new/`)·수정(`[id]/edit/`) (owner·admin). 폼은 `src/components/admin/GameForm.tsx`, 값 확인은 `src/lib/game-form.ts`(선택지·길이를 서버에서 다시 확인)
   - 새 게임은 대기로 시작, id는 자동 생성(`g-` + 6자, 겹치면 다시 뽑음). 수정해도 상태·심의 기록은 그대로
   - 폼은 `<form action>` 대신 `onSubmit`으로 서버 액션을 부른다 (React 19가 action 폼을 제출 후 비워서 오류 때 입력이 사라짐)
@@ -145,11 +146,11 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 오류는 우리가 만든 메시지나 종류만 남긴다 (요청 주소·응답 본문·비밀값을 로그에 남기지 않음)
 - `index.ts`: Worker 진입점(`scheduled`). 검색 → 거르기 → 안 본 글만 → AI → 저장. 로그에는 개수·호출 수·토큰만 (글 제목·링크·비밀값 X). AI가 판단한 글만 '본 글'로 남기고 호출 오류는 다음 날 다시
 - `store.ts`: 수집 전용 계정(collector)으로 `collect_unseen`·`collect_record`만 부른다. 초안의 심의 참고 정보(원문 요약·검색어·확신도·글 날짜·AI 원래 소개글 `aiSummary`)는 `collect_meta`에. 오류는 Postgres 코드만 남긴다
-- `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron은 PR ③에서 켬(`0 21 * * *`, 06:00 KST). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
+- `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron `0 21 * * *`(06:00 KST). 깨어나면 `collect_enabled()`부터 확인해 꺼져 있으면 'off'만 기록 (`index.ts`의 `runScheduled`, 설정을 못 읽어도 꺼짐). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
 - `src/lib/game-id.ts`: 게임 id 생성. 사이트(`db.ts`)와 수집 Worker가 같이 쓴다
 - 3단계 PR ①(#23, 끝): 위 Worker·DB. 운영 DB에 `neon/collect.sql` 실행·`collect:db-check` 통과, Secret 4개, `collect:deploy`(cron 없음)까지 2026-11-28 반영. 로컬 `collect:dev`는 `.dev.vars`의 테스트 브랜치(`collect-test`) 주소로
 - PR ②(`feat/moderation-ai-draft`): 심의 세부 'AI 초안'(`src/components/admin/CollectDraft.tsx`)과 승인 전 '원본 확인' 체크. 체크 여부는 저장하지 않는다(decisions 2026-11-28). AI 소개글은 `collect_meta.aiSummary`에 추천 문구로 남고 수정 화면에서 복사·'소개글에 넣기'. 병합 후 `collect:deploy` 필요(aiSummary 저장)
-- 다음 PR ③(`feat/collect-toggle`): 관리자 화면에서 자동 수집 on/off·최근 실행 기록, cron 켜고 CPU 10ms 측정
+- PR ③(`feat/collect-toggle`): 관리자 화면 on/off·실행 기록(`neon/collect-settings.sql`), cron 켬. 병합 후 운영 DB에 `collect-settings.sql` → `collect:db-check` → `collect:deploy` → 화면에서 켜기 → 다음 날 실행 기록·CPU 10ms 확인
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build
@@ -225,7 +226,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 ## Neon DB 스키마 (`neon/schema.sql`)
 - 지금은 `games` 테이블만 있다. 회원·댓글·후기는 로그인 방식을 정하는 4주차에 추가.
-- 자동 수집용(`neon/collect.sql`, 운영 DB에 실행함 2026-11-28): `collect_seen`(AI까지 보낸 글의 링크·결과), `games.collect_meta`(jsonb, 심의 참고, 관리자 화면만), 함수 `collect_unseen`·`collect_record`(security definer, 상태 `pending`·`auto_scraped` true 고정, 한 번에 3개까지), 계정 `collector`(함수 2개 실행 권한만, 콘솔이 아니라 SQL로 만듦)
+- 자동 수집용(`neon/collect.sql`, 운영 DB에 실행함 2026-11-28): `collect_seen`(AI까지 보낸 글의 링크·결과), `games.collect_meta`(jsonb, 심의 참고, 관리자 화면만), 함수 `collect_unseen`·`collect_record`(security definer, 상태 `pending`·`auto_scraped` true 고정, 한 번에 3개까지), 계정 `collector`(함수만 실행, 콘솔이 아니라 SQL로 만듦)
+- 켜기/끄기(`neon/collect-settings.sql`, **운영 DB에는 PR ③ 병합 후 실행**): `collect_settings`(한 줄, `enabled` 기본 false·`updated_by`·`updated_at`), `collect_runs`(ok/off/failed·요약 jsonb, 최근 60개), collector용 함수 `collect_enabled`·`collect_log_run`(4KB 넘는 요약 거절). 사이트(소유자 계정)는 표를 직접 읽고 씀
 - 심의 칼럼: `status`('pending'/'approved'/'rejected'), `auto_scraped`(A방식 false / B방식 true), `created_by`(등록한 관리자), `approved_by`, `approved_at`, `rejection_reason`(거절 시 필수, DB 제약조건), `admin_notes`, `updated_at`(트리거로 자동 갱신)
 - 원본 링크는 `link` 칼럼 (별도 `source_url` 없음)
 - 썸네일은 `thumbnail_url` 칼럼. 원본 사이트의 이미지 주소만 저장하고 파일은 복사하지 않는다 (사용자 카드·상세는 있을 때만, 관리자 심의 세부는 없으면 '썸네일 없음')

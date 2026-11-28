@@ -21,6 +21,7 @@ trap '$FX cleanup' EXIT
 echo "--- 로그인·첫 비밀번호 변경"
 chk "공개 가입 차단" "$(post x /sign-up/email '{"email":"x@test.local","password":"aaaaaaaaaaaa","name":"x"}')" 400
 chk "비로그인 /admin → 로그인" "$(page x /admin)" "307 $B/admin/login"
+chk "비로그인 /admin/collect → 로그인" "$(page x /admin/collect)" "307 $B/admin/login"
 chk "비로그인 관리 API" "$(get x /admin/list-users)" 401
 chk "admin 로그인" "$(login a admin temp-password-admin)" 200
 cp "$D/a" "$D/a2"  # 같은 계정의 다른 기기 세션
