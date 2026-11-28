@@ -4,9 +4,11 @@
 import assert from "node:assert/strict";
 import { SubrequestBudget } from "../workers/collect/src/budget";
 import { draftGames, judge, type AiDraft, type AskResult } from "../workers/collect/src/draft";
+import { runScheduled, type CollectSummary } from "../workers/collect/src/index";
 import { checkOutput } from "../workers/collect/src/output-check";
 import { findBlocked, looksLikeGame, looksLikeInjection } from "../workers/collect/src/rules";
 import type { Candidate } from "../workers/collect/src/search";
+import { StoreError, type RunStatus } from "../workers/collect/src/store";
 import { cleanText } from "../workers/collect/src/text";
 import { normalizeLink } from "../workers/collect/src/url";
 
@@ -189,6 +191,60 @@ await checkAsync("키 오류(401)면 남은 후보에 호출을 쓰지 않고 �
   );
   assert.equal(n, 1);
   assert.equal(r.stopped, "AI 호출 실패 (HTTP 401)");
+});
+
+console.log("켜기/끄기 (가짜 DB, 키 없이)");
+const env = { KAKAO_REST_API_KEY: "", YOUTUBE_API_KEY: "", ANTHROPIC_API_KEY: "", COLLECT_DATABASE_URL: "" };
+const summary: CollectSummary = {
+  searched: 4, found: 2, droppedByCode: {}, aiCalls: 2, drafts: 1, saved: 1, aiDropped: {},
+  tokens: { input: 1, output: 1 }, subrequests: 6, errors: [],
+};
+// enabled 결과와 기록을 흉내 내는 가짜 store. 진짜 fetch를 부르면 실패하도록 막는다
+function fakeStore(enabled: () => Promise<boolean>) {
+  const logs: { status: string; summary: unknown }[] = [];
+  return { logs, store: { enabled, logRun: async (status: RunStatus, s: Record<string, unknown> | null) => void logs.push({ status, summary: s }) } };
+}
+async function withNoFetch(fn: () => Promise<void>) {
+  const real = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async () => { calls++; throw new Error("fetch 호출됨"); }) as typeof fetch;
+  try { await fn(); } finally { globalThis.fetch = real; }
+  assert.equal(calls, 0, "외부 호출이 있었다");
+}
+await checkAsync("꺼져 있으면 수집하지 않고 'off'로 기록 (외부 호출 0번)", () => withNoFetch(async () => {
+  const { logs, store } = fakeStore(async () => false);
+  let collected = 0;
+  const r = await runScheduled(env, store, async () => (collected++, summary));
+  assert.equal(r.status, "off");
+  assert.equal(collected, 0);
+  assert.deepEqual(logs, [{ status: "off", summary: null }]);
+}));
+await checkAsync("설정을 못 읽으면 꺼진 것으로 보고 'failed'로 기록", () => withNoFetch(async () => {
+  const { logs, store } = fakeStore(async () => { throw new StoreError("설정 확인 실패 (08006)"); });
+  let collected = 0;
+  const r = await runScheduled(env, store, async () => (collected++, summary));
+  assert.equal(collected, 0);
+  assert.deepEqual(r, { status: "failed", error: "설정 확인 실패 (08006)" });
+  assert.equal(logs[0].status, "failed");
+}));
+await checkAsync("켜져 있으면 수집하고 'ok'로 요약 기록 (제목·링크 없음)", async () => {
+  const { logs, store } = fakeStore(async () => true);
+  const r = await runScheduled(env, store, async () => summary);
+  assert.equal(r.status, "ok");
+  assert.equal(logs[0].status, "ok");
+  assert.equal((logs[0].summary as { saved: number }).saved, 1);
+  assert.ok(!JSON.stringify(logs[0].summary).includes("http"));
+});
+await checkAsync("수집 중 오류는 우리가 만든 메시지만 'failed'로 기록", async () => {
+  const { logs, store } = fakeStore(async () => true);
+  const r = await runScheduled(env, store, async () => { throw new Error("https://secret.example/?key=abc"); });
+  assert.deepEqual(r, { status: "failed", error: "Error" });
+  assert.deepEqual(logs[0], { status: "failed", summary: { error: "Error" } });
+});
+await checkAsync("기록이 실패해도 결과는 그대로", async () => {
+  const store = { enabled: async () => true, logRun: async () => { throw new StoreError("실행 기록 실패 (42501)"); } };
+  const r = await runScheduled(env, store, async () => summary);
+  assert.equal(r.status, "ok");
 });
 
 console.log(failed ? `\n${failed}개 실패` : "\n모두 통과");

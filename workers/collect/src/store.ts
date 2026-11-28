@@ -7,11 +7,34 @@ import type { GameDraft } from "./draft";
 
 export type SeenRecord = { link: string; result: string };
 
+export type RunStatus = "ok" | "off" | "failed";
+
 export class StoreError extends Error {}
+
+export type Store = ReturnType<typeof createStore>;
 
 export function createStore(databaseUrl: string) {
   const sql = neon(databaseUrl);
   return {
+    // 관리자가 자동 수집을 켜 두었는지 (neon/collect-settings.sql). 오류는 그대로 던져서 부른 쪽이 '꺼짐'으로 처리한다
+    async enabled(): Promise<boolean> {
+      try {
+        const rows = await sql`select collect_enabled() as on`;
+        return rows[0]?.on === true;
+      } catch (e) {
+        throw new StoreError(`설정 확인 실패 (${dbErrorCode(e)})`);
+      }
+    },
+
+    // 실행 결과 기록 (개수·호출 수·오류 종류만)
+    async logRun(status: RunStatus, summary: Record<string, unknown> | null): Promise<void> {
+      try {
+        await sql`select collect_log_run(${status}, ${summary ? JSON.stringify(summary) : null}::jsonb)`;
+      } catch (e) {
+        throw new StoreError(`실행 기록 실패 (${dbErrorCode(e)})`);
+      }
+    },
+
     // 아직 안 본 링크만
     async unseen(links: string[]): Promise<Set<string>> {
       if (!links.length) return new Set();
