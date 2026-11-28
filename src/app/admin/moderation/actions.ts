@@ -10,7 +10,7 @@ import type { ReviewStatus } from "@/lib/types";
 const MAX_REASON = 500;
 const MAX_NOTES = 2000;
 
-// 허용하는 상태 변경: 대기 → 승인/거절, 승인 → 거절(내리기), 거절 → 승인(다시 승인)
+// 허용하는 상태 변경: 대기 → 승인/거절, 승인 → 거절(거절로 내리기), 거절 → 승인(다시 승인). 승인 → 대기(다시 심의하기)는 revertGame
 const ALLOWED_FROM: Record<"approved" | "rejected", ReviewStatus[]> = {
   approved: ["pending", "rejected"],
   rejected: ["pending", "approved"],
@@ -56,7 +56,8 @@ export async function rejectGame(_: ActionState, form: FormData): Promise<Action
 // 서울 날짜 YYYY-MM-DD (en-CA 형식이 이 모양이다)
 const seoulDate = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
 
-// 승인 → 대기. owner·admin 모두 가능. 사유는 칼럼 대신 메모 끝에 '[대기로 되돌림 날짜 닉네임] 사유'로 남긴다 (decisions 2026-11-28)
+// 승인 → 대기('다시 심의하기'). owner·admin 모두 가능. 사유는 선택이고, 칼럼 대신 메모 끝에 '[다시 심의 날짜 닉네임] 사유'로 남긴다.
+// 승인 기록을 비우므로 사유가 없어도 누가·언제는 메모에 남긴다 (decisions 2026-11-28)
 // 대기로 돌아간 자동 수집 게임을 다시 승인할 때는 approveGame의 '원본 확인' 규칙이 그대로 적용된다
 export async function revertGame(_: ActionState, form: FormData): Promise<ActionState> {
   const { user } = await requireAdmin({ fresh: true });
@@ -66,10 +67,9 @@ export async function revertGame(_: ActionState, form: FormData): Promise<Action
 
   // 메모가 한 줄 기록으로 남도록 줄바꿈·연속 공백은 공백 하나로
   const reason = String(form.get("reason") ?? "").replace(/\s+/g, " ").trim();
-  if (!reason) return { ok: false, message: "대기로 되돌리는 사유를 적어 주세요." };
   if (reason.length > MAX_REASON) return { ok: false, message: `사유는 ${MAX_REASON}자까지 쓸 수 있어요.` };
 
-  const noteLine = `[대기로 되돌림 ${seoulDate()} ${user.name || "관리자"}] ${reason}`;
+  const noteLine = `[다시 심의 ${seoulDate()} ${user.name || "관리자"}]${reason ? ` ${reason}` : ""}`;
   const result = await revertToPending({ id, noteLine, maxNotes: MAX_NOTES });
   if (result === "changed") return { ok: false, message: ALREADY_DONE };
   if (result === "too_long") {

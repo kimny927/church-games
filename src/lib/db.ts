@@ -119,7 +119,7 @@ export async function reviewGame(args: {
   return rows.length > 0;
 }
 
-// 승인된 게임을 대기로 되돌린다. 승인 기록(approved_by·approved_at)은 비우고, 사유는 칼럼 대신 메모 끝에 한 줄 덧붙인다
+// 승인된 게임을 대기로 되돌린다('다시 심의하기'). 승인 기록(approved_by·approved_at)은 비우고, 사유는 칼럼 대신 메모 끝에 한 줄 덧붙인다
 // (decisions 2026-11-28). 상태 확인·메모 덧붙이기·길이 확인을 한 문장에서 해서 그 사이 다른 관리자의 처리나 메모가 끼지 않는다
 export async function revertToPending(args: { id: string; noteLine: string; maxNotes: number }): Promise<"ok" | "changed" | "too_long"> {
   const { id, noteLine, maxNotes } = args;

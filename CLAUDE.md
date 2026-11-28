@@ -121,10 +121,10 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/app/admin/`: `layout.tsx`(noindex), `page.tsx`(홈·로그아웃), `login/`, `password/`(임시 비밀번호로 첫 로그인 시 강제), `profile/`(내 정보: 닉네임 변경)
 - 관리자 닉네임: Better Auth의 `user.name`을 쓴다 (DB 변경 없음). 규칙은 `src/lib/nickname.ts`, 중복 확인은 `db.ts`의 `isNicknameTaken`. 심의 기록·관리자 목록에 이메일 대신 닉네임을 보여 준다
 - `src/app/admin/admins/`: 관리자 관리 (owner 전용: 이메일·닉네임·역할로 추가, 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
-- `src/app/admin/moderation/`: 게임 심의 (owner·admin). 목록(`page.tsx`)은 대기/승인/거절 탭과 항목만 보여 주고, 세부(`[id]/page.tsx`)에서 내용을 보고 승인·거절(사유 필수)·내리기·다시 승인·대기로 되돌리기·메모를 한다 (`src/components/admin/ReviewPanel.tsx`)
-  - 대기로 되돌리기(승인 상태만, 사유 필수): `db.ts`의 `revertToPending`이 승인 기록(`approved_by`·`approved_at`)을 비우고 사유를 `admin_notes` 끝에 `[대기로 되돌림 날짜 닉네임] 사유`로 덧붙인다(칼럼 없음, 메모 2000자 넘으면 거절). 자동 수집 게임을 다시 승인할 때는 '원본 확인'이 다시 필요하다
+- `src/app/admin/moderation/`: 게임 심의 (owner·admin). 목록(`page.tsx`)은 대기/승인/거절 탭과 항목만 보여 주고, 세부(`[id]/page.tsx`)에서 내용을 보고 승인·거절(사유 필수)·거절로 내리기·다시 승인·다시 심의하기·메모를 한다 (`src/components/admin/ReviewPanel.tsx`)
+  - 다시 심의하기(승인 → 대기, 사유 선택): `db.ts`의 `revertToPending`이 승인 기록(`approved_by`·`approved_at`)을 비우고 `admin_notes` 끝에 `[다시 심의 날짜 닉네임] 사유`를 덧붙인다(사유가 없어도 누가·언제는 남김·칼럼 없음, 메모 2000자 넘으면 거절). 자동 수집 게임을 다시 승인할 때는 '원본 확인'이 다시 필요하다
   - 자동 수집 게임: 썸네일 아래 소개글(사용자에게 보이는 글, 'AI 추천 문구 그대로/관리자가 고침' 표시)과 'AI 초안' 상자(`CollectDraft.tsx`, 원문 요약과 AI 추천 문구 나란히·검색어·확신도)를 보여 주고, 승인·다시 승인은 '원본 글을 직접 확인했어요' 체크가 있어야 한다. 서버 액션은 체크가 없으면 DB의 `auto_scraped`로 다시 확인한다 (`isAutoScraped`). 거절·내리기는 막지 않음. `CollectMeta` 타입은 `src/lib/types.ts`(수집 Worker와 같이 씀)
-  - 성공하면 원래 목록 탭으로 돌아가 '승인되었습니다/거절되었습니다/대기로 되돌렸습니다' 알림(`?done=`), 실패하면 세부에 머물며 팝업
+  - 성공하면 원래 목록 탭으로 돌아가 '승인되었습니다/거절되었습니다/다시 심의 대기로 옮겼습니다' 알림(`?done=`), 실패하면 세부에 머물며 팝업
 - `src/app/admin/games/`: 게임 등록(`new/`)·수정(`[id]/edit/`) (owner·admin). 폼은 `src/components/admin/GameForm.tsx`, 값 확인은 `src/lib/game-form.ts`(선택지·길이를 서버에서 다시 확인)
   - 새 게임은 대기로 시작, id는 자동 생성(`g-` + 6자, 겹치면 다시 뽑음). 수정해도 상태·심의 기록은 그대로
   - 폼은 `<form action>` 대신 `onSubmit`으로 서버 액션을 부른다 (React 19가 action 폼을 제출 후 비워서 오류 때 입력이 사라짐)

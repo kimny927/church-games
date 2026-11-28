@@ -10,7 +10,7 @@ import ActionMessage from "./ActionMessage";
 
 type Action = (prev: ActionState, form: FormData) => Promise<ActionState>;
 
-// 심의 세부 페이지의 승인·거절·대기로 되돌리기·메모. 성공하면 서버가 목록으로 보내고(redirect), 실패하면 여기 머물며 팝업으로 알린다
+// 심의 세부 페이지의 승인·거절(거절로 내리기)·다시 심의하기·메모. 성공하면 서버가 목록으로 보내고(redirect), 실패하면 여기 머물며 팝업으로 알린다
 export default function ReviewPanel({ game }: { game: ModerationGame }) {
   const [failure, setFailure] = useState<string | null>(null);
   const report = (action: Action): Action => async (prev, form) => {
@@ -81,7 +81,7 @@ export default function ReviewPanel({ game }: { game: ModerationGame }) {
               className="min-w-0 flex-1 rounded border px-3 py-2"
             />
             <SubmitButton disabled={deciding} className="rounded border border-red-300 px-3 py-2 text-red-600">
-              {game.status === "approved" ? "내리기" : "거절"}
+              {game.status === "approved" ? "거절로 내리기" : "거절"}
             </SubmitButton>
           </form>
         )}
@@ -89,24 +89,23 @@ export default function ReviewPanel({ game }: { game: ModerationGame }) {
           <form
             action={revertAction}
             onSubmit={confirmSubmit(
-              `'${game.name}'을(를) 대기로 되돌릴까요?\n사용자 페이지에서 바로 사라지고, 다시 승인해야 보여요.`,
+              `'${game.name}'을(를) 다시 심의할까요?\n대기 탭으로 옮겨지고 사용자 페이지에서 바로 사라져요. 다시 승인해야 보여요.`,
             )}
             className="flex gap-2"
           >
             {hidden}
             <input
               name="reason"
-              required
               maxLength={500}
-              placeholder="대기로 되돌리는 사유 (필수, 메모에 남아요)"
+              placeholder="다시 심의하는 사유 (선택, 메모에 남아요)"
               className="min-w-0 flex-1 rounded border px-3 py-2"
             />
             <SubmitButton
               disabled={deciding}
-              pendingText="되돌리는 중…"
+              pendingText="옮기는 중…"
               className="whitespace-nowrap rounded border border-gray-400 px-3 py-2 text-gray-700"
             >
-              대기로 되돌리기
+              다시 심의하기
             </SubmitButton>
           </form>
         )}
