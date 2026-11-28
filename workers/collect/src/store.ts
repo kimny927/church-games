@@ -46,6 +46,7 @@ export function createStore(databaseUrl: string) {
           author: d.candidate.author,
           publishedAt: d.candidate.publishedAt,
           model,
+          aiSummary: d.summary, // 관리자가 summary를 고쳐도 추천 문구로 남도록
         } satisfies CollectMeta,
       }));
       try {

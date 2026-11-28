@@ -66,6 +66,8 @@ export type CollectMeta = {
   author?: string;
   publishedAt?: string; // 글 날짜 (ISO)
   model: string;
+  // AI가 쓴 소개글 원래 문구 (추천 문구). summary는 관리자가 고칠 수 있어서 따로 남긴다. 2026-11-28 전 수집분엔 없음
+  aiSummary?: string;
 };
 
 // 관리자 등록·수정 폼에서 받는 값. id(자동 생성)와 kind(지금은 '외부 링크' 고정)는 서버가 정한다
