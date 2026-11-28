@@ -68,8 +68,9 @@ function toModerationGame(row: Record<string, unknown>): ModerationGame {
   };
 }
 
-// 대기는 먼저 들어온 것부터, 처리된 것은 최근 처리한 것부터
-export async function getGamesByStatus(status: ReviewStatus): Promise<ModerationGame[]> {
+// 대기는 먼저 들어온 것부터, 처리된 것은 최근 처리한 것부터. 한 쪽씩 (offset 페이징: 관리자 화면이라 쪽 번호가 필요하고 수가 적다)
+// 정렬 끝의 id는 시각이 같은 게임끼리 순서를 고정한다 (없으면 쪽을 넘길 때 겹치거나 빠질 수 있음)
+export async function getGamesByStatus(status: ReviewStatus, page: { limit: number; offset: number }): Promise<ModerationGame[]> {
   const rows = await sql()`
     select g.*, r.name as reviewer_name, r.email as reviewer_email, c.name as creator_name, c.email as creator_email
     from games g
@@ -78,7 +79,8 @@ export async function getGamesByStatus(status: ReviewStatus): Promise<Moderation
     where g.status = ${status}
     order by
       case when ${status} = 'pending' then g.created_at end asc,
-      g.approved_at desc nulls last, g.created_at desc`;
+      g.approved_at desc nulls last, g.created_at desc, g.id
+    limit ${page.limit} offset ${page.offset}`;
   return rows.map(toModerationGame);
 }
 
