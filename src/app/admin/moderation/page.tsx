@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import Pagination from "@/components/admin/Pagination";
 import NavLink from "@/components/ui/NavLink";
 import Toast from "@/components/ui/Toast";
 import { requireAdmin } from "@/lib/admin";
@@ -17,12 +19,33 @@ const DONE_MESSAGE: Record<string, string> = {
   deleted: "영구 삭제했습니다.",
 };
 
+const PAGE_SIZE = 20;
+
+// 쪽 번호: 1 이상의 정수만, 아니면 1쪽
+function parsePage(value?: string) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 ? n : 1;
+}
+
 // 심의 목록: 대상 게임을 보여 주기만 한다. 승인·거절은 세부 페이지(/admin/moderation/[id])에서
-export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ status?: string; done?: string }> }) {
+export default async function ModerationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; done?: string; page?: string }>;
+}) {
   await requireAdmin();
-  const { status: param, done } = await searchParams;
+  const { status: param, done, page: pageParam } = await searchParams;
   const status = TABS.find((t) => t === param) ?? "pending";
-  const [games, counts] = await Promise.all([getGamesByStatus(status), countGamesByStatus()]);
+  const page = parsePage(pageParam);
+  const pageHref = (n: number) => `/admin/moderation?status=${status}${n > 1 ? `&page=${n}` : ""}`;
+
+  // 개수와 목록을 동시에 읽는다. 쪽 번호가 범위를 넘었으면(마지막 게임을 처리한 뒤 등) 마지막 쪽으로 보낸다
+  const [games, counts] = await Promise.all([
+    getGamesByStatus(status, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+    countGamesByStatus(),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(counts[status] / PAGE_SIZE));
+  if (page > totalPages) redirect(pageHref(totalPages));
 
   return (
     <div className="space-y-4">
@@ -65,6 +88,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
           ))}
         </ul>
       )}
+      <Pagination page={page} totalPages={totalPages} href={pageHref} />
 
       <Toast message={done ? DONE_MESSAGE[done] : undefined} clearParam="done" />
     </div>
