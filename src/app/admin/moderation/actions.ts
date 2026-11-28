@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { requireAdmin } from "@/lib/admin";
-import { isAutoScraped, revertToPending, reviewGame, updateAdminNotes } from "@/lib/db";
+import { deleteRejectedGame, isAutoScraped, revertToPending, reviewGame, updateAdminNotes } from "@/lib/db";
 import type { ReviewStatus } from "@/lib/types";
 
 const MAX_REASON = 500;
@@ -78,6 +78,20 @@ export async function revertGame(_: ActionState, form: FormData): Promise<Action
   revalidatePath("/admin/moderation");
   revalidatePath("/admin");
   redirect(`/admin/moderation?status=approved&done=pending`);
+}
+
+// 거절된 게임 영구 삭제. owner·admin 모두 (심의하는 사람이 정리도 하게, decisions 2026-11-28).
+// 되돌릴 수 없으니 화면에서 확인 팝업을 거치고, 세션은 DB로 확인한다
+export async function deleteGame(_: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin({ fresh: true });
+  const id = String(form.get("id"));
+  if (String(form.get("from")) !== "rejected") return { ok: false, message: "거절된 게임만 지울 수 있어요." };
+
+  const done = await deleteRejectedGame(id);
+  if (!done) return { ok: false, message: ALREADY_DONE };
+  revalidatePath("/admin/moderation");
+  revalidatePath("/admin");
+  redirect(`/admin/moderation?status=rejected&done=deleted`);
 }
 
 export async function saveNotes(_: ActionState, form: FormData): Promise<ActionState> {
