@@ -1,4 +1,4 @@
-// 수집 전용 DB 계정(collector)이 정말 '함수 2개만' 할 수 있는지 직접 시험한다. DB에 아무것도 남기지 않는다.
+// 수집 전용 DB 계정(collector)이 정말 '함수만'(collect.sql 2개 + collect-settings.sql 2개) 할 수 있는지 직접 시험한다. DB에 아무것도 남기지 않는다.
 // npm run collect:db-check
 // 필요한 값(.env.local): COLLECT_DATABASE_URL (collector 계정의 연결 문자열. Neon 브랜치에서 시험할 때는 그 브랜치 주소)
 import { neon } from "@neondatabase/serverless";
@@ -60,6 +60,32 @@ await check("collect_record는 초안 4개 이상을 거절", async () => {
   throw new Error("4개를 거절하지 않음");
 });
 
+// neon/collect-settings.sql (켜기/끄기·실행 기록)
+await check("collect_enabled 실행 (true/false)", async () => {
+  const [r] = await sql`select collect_enabled() as on`;
+  if (typeof r.on !== "boolean") throw new Error(`boolean이 아님: ${r.on}`);
+});
+await check("collect_log_run은 알 수 없는 상태를 거절", async () => {
+  // 거절되는 값만 쓴다 (정상 기록은 collector가 지울 수 없어서 시험으로 남기지 않음)
+  try {
+    await sql`select collect_log_run('hacked', null)`;
+  } catch (e) {
+    if ((e as { code?: string }).code === "P0001") return;
+    throw e;
+  }
+  throw new Error("거절하지 않음");
+});
+await check("collect_log_run은 4KB 넘는 요약을 거절", async () => {
+  const big = JSON.stringify({ x: "a".repeat(5000) });
+  try {
+    await sql`select collect_log_run('ok', ${big}::jsonb)`;
+  } catch (e) {
+    if ((e as { code?: string }).code === "P0001") return;
+    throw e;
+  }
+  throw new Error("거절하지 않음");
+});
+
 console.log("할 수 없는 것 (권한 거부가 나야 함)");
 await check("games 읽기", () => denied(() => sql`select id from games limit 1`));
 await check("games 넣기", () => denied(() => sql`insert into games (id, name) values ('g-check', 'x')`));
@@ -67,9 +93,13 @@ await check("games 승인 (상태 바꾸기)", () => denied(() => sql`update gam
 await check("games 지우기", () => denied(() => sql`delete from games where false`));
 await check("collect_seen 직접 읽기", () => denied(() => sql`select link from collect_seen limit 1`));
 await check("관리자 계정 표(user) 읽기", () => denied(() => sql`select id from "user" limit 1`));
+await check("collect_settings 직접 켜기", () => denied(() => sql`update collect_settings set enabled = true where false`));
+await check("collect_settings 직접 읽기", () => denied(() => sql`select enabled from collect_settings`));
+await check("collect_runs 직접 읽기", () => denied(() => sql`select id from collect_runs limit 1`));
+await check("collect_runs 직접 지우기", () => denied(() => sql`delete from collect_runs where false`));
 
 console.log("함수 실행 권한");
-for (const fn of ["collect_unseen(text[])", "collect_record(jsonb, jsonb)"]) {
+for (const fn of ["collect_unseen(text[])", "collect_record(jsonb, jsonb)", "collect_enabled()", "collect_log_run(text, jsonb)"]) {
   await check(`${fn}: 누구나(PUBLIC) 실행할 수 없음`, async () => {
     const [r] = await sql`select has_function_privilege('public', ${fn}, 'execute') as ok`;
     if (r.ok) throw new Error("PUBLIC에 실행 권한이 남아 있다. revoke execute ... from public");

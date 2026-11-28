@@ -11,6 +11,6 @@
   "workers_dev": false,
   "preview_urls": false,
   "observability": { "enabled": true },
-  // cron은 심의 화면의 'AI 초안' 표시(PR ②)를 병합한 뒤 켠다: ["0 21 * * *"] (매일 06:00 KST)
-  "triggers": { "crons": [] }
+  // 매일 06:00 KST. 깨어나도 관리자 화면(/admin/collect)에서 켜 두지 않았으면 검색·AI를 부르지 않는다 (처음 값 꺼짐)
+  "triggers": { "crons": ["0 21 * * *"] }
 }
