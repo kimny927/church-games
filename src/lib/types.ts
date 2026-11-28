@@ -54,6 +54,18 @@ export type ModerationGame = Game & {
   rejectionReason?: string;
   adminNotes?: string;
   createdAt: Date;
+  collectMeta?: CollectMeta; // 자동 수집 게임만
+};
+
+// 자동 수집 게임의 심의 참고 정보 (games.collect_meta, jsonb). 수집 Worker가 저장하고 심의 세부가 읽는다.
+// snippet은 검색 API가 준 원문 요약이라 믿을 수 없는 글이다. 화면에는 텍스트로만 보여 준다
+export type CollectMeta = {
+  snippet: string;
+  keyword: string; // 찾은 검색어
+  confidence: number; // AI 확신도 0~1
+  author?: string;
+  publishedAt?: string; // 글 날짜 (ISO)
+  model: string;
 };
 
 // 관리자 등록·수정 폼에서 받는 값. id(자동 생성)와 kind(지금은 '외부 링크' 고정)는 서버가 정한다

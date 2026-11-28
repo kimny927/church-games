@@ -1,6 +1,6 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { newGameId } from "./game-id";
-import type { Game, GameInput, ModerationGame, ReviewStatus } from "./types";
+import type { CollectMeta, Game, GameInput, ModerationGame, ReviewStatus } from "./types";
 
 // Neon HTTP 드라이버: 요청마다 HTTP로 쿼리해서 Cloudflare Workers처럼 연결을 오래 못 잡는 환경에 맞아요.
 // DATABASE_URL 은 서버에서만 읽어요. 브라우저 코드에서 이 파일을 import 하지 마세요.
@@ -63,6 +63,8 @@ function toModerationGame(row: Record<string, unknown>): ModerationGame {
     rejectionReason: (row.rejection_reason as string) ?? undefined,
     adminNotes: (row.admin_notes as string) ?? undefined,
     createdAt: row.created_at as Date,
+    // jsonb는 드라이버가 객체로 준다
+    collectMeta: (row.collect_meta as CollectMeta | null) ?? undefined,
   };
 }
 
@@ -115,6 +117,12 @@ export async function reviewGame(args: {
     where id = ${id} and status = ${from}
     returning id`;
   return rows.length > 0;
+}
+
+// 승인 전 '원본 확인'이 필요한지 판단할 때. 폼 값이 아니라 DB를 믿는다
+export async function isAutoScraped(id: string): Promise<boolean> {
+  const rows = await sql()`select auto_scraped from games where id = ${id}`;
+  return rows[0]?.auto_scraped === true;
 }
 
 export async function updateAdminNotes(id: string, notes: string | null): Promise<boolean> {
