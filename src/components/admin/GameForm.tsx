@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { createGameAction, fetchLinkMetaAction, updateGameAction } from "@/app/admin/games/actions";
+import CopyButton from "@/components/ui/CopyButton";
 import SubmitButton from "@/components/ui/SubmitButton";
 import Thumbnail from "@/components/ui/Thumbnail";
 import { FILTERS, SOURCE_TYPES, type ModerationGame } from "@/lib/types";
@@ -59,6 +60,18 @@ export default function GameForm({ game }: { game?: ModerationGame }) {
   const formRef = useRef<HTMLFormElement>(null);
   // 썸네일은 직접 쓰는 칸이 아니라서 state로 두고 숨은 칸으로 보낸다
   const [thumbnail, setThumbnail] = useState(game?.thumbnailUrl ?? "");
+  // 자동 수집 게임: 원문 요약·AI 추천 문구를 소개글 옆에 참고로 보여 준다 (폼 값이 아니라 저장되지 않음)
+  const collectMeta = game?.autoScraped ? game.collectMeta : undefined;
+  const summaryRef = useRef<HTMLTextAreaElement>(null);
+
+  // '소개글에 넣기': 소개글 칸을 AI 추천 문구로 바꾼다. 직접 고친 내용이 있으면 덮어쓰기 전에 묻는다
+  function applySuggestion(text: string) {
+    const box = summaryRef.current;
+    if (!box) return;
+    if (box.value.trim() && box.value !== text && !confirm("지금 쓴 소개글을 AI 추천 문구로 바꿀까요?")) return;
+    box.value = text;
+    box.focus();
+  }
 
   // 링크에서 정보를 가져와 비어 있는 칸만 채운다. 이미 쓴 이름·고른 소스 종류는 덮어쓰지 않는다.
   // 썸네일은 직접 쓴 값이 아니라서 새로 가져온 이미지가 있으면 바꾼다 (없으면 기존 것 유지)
@@ -146,8 +159,37 @@ export default function GameForm({ game }: { game?: ModerationGame }) {
       <Field label="게임 이름 *">
         <input name="name" required maxLength={100} defaultValue={game?.name} className={input} />
       </Field>
+      {collectMeta && (
+        <div className="space-y-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+          <p className="text-xs font-semibold text-amber-800">자동 수집 참고 (저장되지 않아요)</p>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-gray-500">원문 요약 (검색 결과)</span>
+              {collectMeta.snippet && <CopyButton text={collectMeta.snippet} />}
+            </div>
+            <p className="leading-relaxed break-words whitespace-pre-line text-gray-700">{collectMeta.snippet || "원문 요약 없음"}</p>
+            <p className="text-xs text-gray-500">참고용이에요. 그대로 옮기지 말고 요약해 주세요 (저작권).</p>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-gray-500">AI 추천 문구</span>
+              {collectMeta.aiSummary && (
+                <span className="flex gap-1">
+                  <CopyButton text={collectMeta.aiSummary} />
+                  <button type="button" onClick={() => applySuggestion(collectMeta.aiSummary!)} className="rounded border bg-white px-2 py-0.5 text-xs">
+                    소개글에 넣기
+                  </button>
+                </span>
+              )}
+            </div>
+            <p className="leading-relaxed break-words whitespace-pre-line">
+              {collectMeta.aiSummary || <span className="text-gray-400">추천 문구가 저장되지 않은 예전 수집분이에요</span>}
+            </p>
+          </div>
+        </div>
+      )}
       <Field label="소개글 *" hint="원문을 복사하지 말고 직접 요약해 주세요 (저작권). 자세한 방법은 원본 링크로 안내돼요.">
-        <textarea name="summary" required maxLength={1000} rows={4} defaultValue={game?.summary} className={input} />
+        <textarea ref={summaryRef} name="summary" required maxLength={1000} rows={4} defaultValue={game?.summary} className={input} />
       </Field>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Select name="budget" label="예산" options={FILTERS.budget} value={game?.budget} />

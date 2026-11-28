@@ -2,19 +2,10 @@
 // (표를 직접 읽거나 쓰지 못함). 쿼리 1개가 외부 호출 1번이다 (HTTP 드라이버)
 import { neon } from "@neondatabase/serverless";
 import { newGameId } from "../../../src/lib/game-id";
+import type { CollectMeta } from "../../../src/lib/types";
 import type { GameDraft } from "./draft";
 
 export type SeenRecord = { link: string; result: string };
-
-// 심의 화면에서 AI 초안과 나란히 보여 줄 참고 정보 (사용자 화면에는 안 나옴)
-export type CollectMeta = {
-  snippet: string; // 검색 API의 원문 요약
-  keyword: string;
-  confidence: number;
-  author?: string;
-  publishedAt?: string;
-  model: string;
-};
 
 export class StoreError extends Error {}
 
@@ -55,6 +46,7 @@ export function createStore(databaseUrl: string) {
           author: d.candidate.author,
           publishedAt: d.candidate.publishedAt,
           model,
+          aiSummary: d.summary, // 관리자가 summary를 고쳐도 추천 문구로 남도록
         } satisfies CollectMeta,
       }));
       try {

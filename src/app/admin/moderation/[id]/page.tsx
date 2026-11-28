@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import GameInfo from "@/components/GameInfo";
+import CollectDraft from "@/components/admin/CollectDraft";
 import ReviewPanel from "@/components/admin/ReviewPanel";
 import Thumbnail from "@/components/ui/Thumbnail";
 import NavLink from "@/components/ui/NavLink";
@@ -27,6 +28,7 @@ export default async function ModerationDetailPage({ params }: { params: Promise
   const { id } = await params;
   const game = await getGameForAdmin(id);
   if (!game) notFound();
+  const aiSummary = game.collectMeta?.aiSummary;
 
   return (
     <div className="space-y-4">
@@ -54,7 +56,19 @@ export default async function ModerationDetailPage({ params }: { params: Promise
 
       {/* 사용자 화면과 달리 없어도 자리를 보여 준다 (승인 전에 빠진 것을 알 수 있게) */}
       <Thumbnail src={game.thumbnailUrl} fallback="썸네일 없음" className="aspect-video w-full max-w-sm rounded" />
-      {game.summary && <p className="text-sm leading-relaxed whitespace-pre-line">{game.summary}</p>}
+      {/* 사용자에게 실제로 보일 소개글. 자동 수집 게임도 직접 등록한 게임과 같은 자리·모양으로 */}
+      <section className="space-y-1">
+        <h2 className="text-xs font-semibold text-gray-500">
+          소개글 (사용자에게 보이는 글)
+          {game.autoScraped && aiSummary && (
+            <span className="ml-1 font-normal text-amber-700">
+              · {game.summary === aiSummary ? "AI 추천 문구 그대로" : "관리자가 고침"}
+            </span>
+          )}
+        </h2>
+        <p className="text-sm leading-relaxed whitespace-pre-line">{game.summary || "—"}</p>
+      </section>
+      {game.autoScraped && <CollectDraft meta={game.collectMeta} />}
       {game.tags.length > 0 && <p className="text-xs text-gray-500">{game.tags.map((t) => `#${t}`).join(" ")}</p>}
       {/* 사용자 상세 페이지와 같은 항목. 빠진 칸도 '—'로 보여서 승인 전에 확인할 수 있게 */}
       <GameInfo game={game} showEmpty />

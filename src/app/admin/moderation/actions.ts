@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/app/admin/admins/actions";
 import { requireAdmin } from "@/lib/admin";
-import { reviewGame, updateAdminNotes } from "@/lib/db";
+import { isAutoScraped, reviewGame, updateAdminNotes } from "@/lib/db";
 import type { ReviewStatus } from "@/lib/types";
 
 const MAX_REASON = 500;
@@ -34,6 +34,14 @@ async function review(to: "approved" | "rejected", form: FormData, reason?: stri
 }
 
 export async function approveGame(_: ActionState, form: FormData): Promise<ActionState> {
+  // 자동 수집 게임은 원본 글을 확인했다고 체크해야 승인한다. 체크박스는 화면 편의일 뿐이라
+  // 체크가 없으면 폼이 아니라 DB로 자동 수집 여부를 확인한다 (체크 여부는 저장하지 않음, decisions 2026-11-28)
+  if (form.get("sourceChecked") !== "on") {
+    await requireAdmin({ fresh: true });
+    if (await isAutoScraped(String(form.get("id")))) {
+      return { ok: false, message: "자동 수집 게임은 원본 글을 먼저 확인하고 체크해 주세요." };
+    }
+  }
   return review("approved", form);
 }
 

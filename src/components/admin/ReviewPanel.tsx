@@ -22,6 +22,9 @@ export default function ReviewPanel({ game }: { game: ModerationGame }) {
   const [, rejectAction, rejecting] = useActionState(report(rejectGame), null);
   const [notesState, notesAction] = useActionState(saveNotes, null);
   const deciding = approving || rejecting;
+  // 자동 수집 게임은 원본 확인 체크 전에는 승인 버튼을 끈다 (서버 액션에서도 다시 확인)
+  const [sourceChecked, setSourceChecked] = useState(false);
+  const needsCheck = game.autoScraped && !sourceChecked;
 
   const confirmSubmit = (msg: string) => (e: React.FormEvent) => {
     if (!confirm(msg)) e.preventDefault();
@@ -39,9 +42,25 @@ export default function ReviewPanel({ game }: { game: ModerationGame }) {
     <section className="space-y-4">
       <div className="space-y-2 text-sm">
         {game.status !== "approved" && (
-          <form action={approveAction}>
+          <form action={approveAction} className="space-y-2">
             {hidden}
-            <SubmitButton disabled={deciding} pendingText="승인 중…" className="w-full rounded bg-blue-600 py-2 font-semibold text-white">
+            {game.autoScraped && (
+              <label className="flex items-center gap-2 rounded bg-amber-50 px-3 py-2 text-amber-800">
+                <input
+                  type="checkbox"
+                  name="sourceChecked"
+                  checked={sourceChecked}
+                  onChange={(e) => setSourceChecked(e.target.checked)}
+                  className="size-4"
+                />
+                원본 글을 직접 확인했어요
+              </label>
+            )}
+            <SubmitButton
+              disabled={deciding || needsCheck}
+              pendingText="승인 중…"
+              className="w-full rounded bg-blue-600 py-2 font-semibold text-white"
+            >
               {game.status === "pending" ? "승인" : "다시 승인"}
             </SubmitButton>
           </form>

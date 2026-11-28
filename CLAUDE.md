@@ -103,7 +103,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `src/components/GameBrowser.tsx`: 목록 + 검색 + 필터 (클라이언트 컴포넌트)
 - `src/app/(site)/games/[id]/page.tsx`: 게임 상세 페이지
 - `src/components/Footer.tsx`: 신천지 금지 안내 (모든 페이지에 유지)
-- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`, `Toast`(잠깐 뜨는 알림), `AlertDialog`(확인 팝업), `Thumbnail`(외부 이미지, 없거나 깨지면 기본 모양)). 테마를 바꿀 때 여기부터 고친다
+- `src/components/ui/`: 공통 UI (`Spinner`, `LoadingScreen`, `SubmitButton`, `NavLink`, `Toast`(잠깐 뜨는 알림), `AlertDialog`(확인 팝업), `Thumbnail`(외부 이미지, 없거나 깨지면 기본 모양), `CopyButton`(클립보드 복사)). 테마를 바꿀 때 여기부터 고친다
 - `src/components/GameInfo.tsx`: 게임 세부 정보 표. 사용자 상세 페이지와 관리자 심의 세부가 같이 쓴다
   - 폼 제출 버튼은 `SubmitButton` (서버 액션 폼이면 제출 중을 스스로 앎, 아니면 `pending` prop)
   - 화면 전환: 사용자 페이지는 `src/app/(site)/loading.tsx`(URL엔 `(site)`가 안 붙음), 관리자 화면은 링크에 `NavLink`. 관리자 쪽에 `loading.tsx`를 두면 응답을 먼저 보내서 `requireAdmin`의 redirect가 307이 아니게 되므로 두지 않는다
@@ -122,6 +122,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 관리자 닉네임: Better Auth의 `user.name`을 쓴다 (DB 변경 없음). 규칙은 `src/lib/nickname.ts`, 중복 확인은 `db.ts`의 `isNicknameTaken`. 심의 기록·관리자 목록에 이메일 대신 닉네임을 보여 준다
 - `src/app/admin/admins/`: 관리자 관리 (owner 전용: 이메일·닉네임·역할로 추가, 임시 비밀번호 한 번 표시, 초기화, 역할 변경, 삭제). 서버 액션은 `actions.ts`, 임시 비밀번호는 URL이 아니라 액션 반환값으로만 보여준다
 - `src/app/admin/moderation/`: 게임 심의 (owner·admin). 목록(`page.tsx`)은 대기/승인/거절 탭과 항목만 보여 주고, 세부(`[id]/page.tsx`)에서 내용을 보고 승인·거절(사유 필수)·내리기·다시 승인·메모를 한다 (`src/components/admin/ReviewPanel.tsx`)
+  - 자동 수집 게임: 썸네일 아래 소개글(사용자에게 보이는 글, 'AI 추천 문구 그대로/관리자가 고침' 표시)과 'AI 초안' 상자(`CollectDraft.tsx`, 원문 요약과 AI 추천 문구 나란히·검색어·확신도)를 보여 주고, 승인·다시 승인은 '원본 글을 직접 확인했어요' 체크가 있어야 한다. 서버 액션은 체크가 없으면 DB의 `auto_scraped`로 다시 확인한다 (`isAutoScraped`). 거절·내리기는 막지 않음. `CollectMeta` 타입은 `src/lib/types.ts`(수집 Worker와 같이 씀)
   - 성공하면 원래 목록 탭으로 돌아가 '승인되었습니다/거절되었습니다' 알림(`?done=`), 실패하면 세부에 머물며 팝업
 - `src/app/admin/games/`: 게임 등록(`new/`)·수정(`[id]/edit/`) (owner·admin). 폼은 `src/components/admin/GameForm.tsx`, 값 확인은 `src/lib/game-form.ts`(선택지·길이를 서버에서 다시 확인)
   - 새 게임은 대기로 시작, id는 자동 생성(`g-` + 6자, 겹치면 다시 뽑음). 수정해도 상태·심의 기록은 그대로
@@ -142,11 +143,12 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `output-check.ts`: AI 출력의 링크·도메인·전화·이메일·오픈채팅·@아이디, 거를 말, 주입 흔적, 길이(소개글 20~200자, 준비물 100자)를 검사해 걸리면 버린다 (고치지 않음)
 - 오류는 우리가 만든 메시지나 종류만 남긴다 (요청 주소·응답 본문·비밀값을 로그에 남기지 않음)
 - `index.ts`: Worker 진입점(`scheduled`). 검색 → 거르기 → 안 본 글만 → AI → 저장. 로그에는 개수·호출 수·토큰만 (글 제목·링크·비밀값 X). AI가 판단한 글만 '본 글'로 남기고 호출 오류는 다음 날 다시
-- `store.ts`: 수집 전용 계정(collector)으로 `collect_unseen`·`collect_record`만 부른다. 초안의 심의 참고 정보(원문 요약·검색어·확신도·글 날짜)는 `collect_meta`에. 오류는 Postgres 코드만 남긴다
-- `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron은 PR ②에서 켬(`0 21 * * *`, 06:00 KST). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
+- `store.ts`: 수집 전용 계정(collector)으로 `collect_unseen`·`collect_record`만 부른다. 초안의 심의 참고 정보(원문 요약·검색어·확신도·글 날짜·AI 원래 소개글 `aiSummary`)는 `collect_meta`에. 오류는 Postgres 코드만 남긴다
+- `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron은 PR ③에서 켬(`0 21 * * *`, 06:00 KST). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
 - `src/lib/game-id.ts`: 게임 id 생성. 사이트(`db.ts`)와 수집 Worker가 같이 쓴다
-- 3단계 PR ①(`feat/collect-worker`, 만드는 중): 위 Worker·DB. Neon 테스트 브랜치(`collect-test`)에서 확인 끝(2026-11-28: db-check 12개 통과, collect:dev 2번 실행). 병합 후 운영 DB에 `neon/collect.sql` → `collect:db-check`(운영 주소) → Secret 4개 → `collect:deploy`(cron 없음)
-- 다음 PR ②(`feat/moderation-ai-draft`): 심의 세부에 'AI 초안'과 원문 요약 나란히, 자동 수집 게임 승인 전 '원본 확인' 체크박스(서버에서도 확인), cron 켜고 배포 후 CPU 10ms 측정
+- 3단계 PR ①(#23, 끝): 위 Worker·DB. 운영 DB에 `neon/collect.sql` 실행·`collect:db-check` 통과, Secret 4개, `collect:deploy`(cron 없음)까지 2026-11-28 반영. 로컬 `collect:dev`는 `.dev.vars`의 테스트 브랜치(`collect-test`) 주소로
+- PR ②(`feat/moderation-ai-draft`): 심의 세부 'AI 초안'(`src/components/admin/CollectDraft.tsx`)과 승인 전 '원본 확인' 체크. 체크 여부는 저장하지 않는다(decisions 2026-11-28). AI 소개글은 `collect_meta.aiSummary`에 추천 문구로 남고 수정 화면에서 복사·'소개글에 넣기'. 병합 후 `collect:deploy` 필요(aiSummary 저장)
+- 다음 PR ③(`feat/collect-toggle`): 관리자 화면에서 자동 수집 on/off·최근 실행 기록, cron 켜고 CPU 10ms 측정
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build
@@ -222,7 +224,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 ## Neon DB 스키마 (`neon/schema.sql`)
 - 지금은 `games` 테이블만 있다. 회원·댓글·후기는 로그인 방식을 정하는 4주차에 추가.
-- 자동 수집용(`neon/collect.sql`, **운영 DB에는 아직 실행 전**): `collect_seen`(AI까지 보낸 글의 링크·결과), `games.collect_meta`(jsonb, 심의 참고, 관리자 화면만), 함수 `collect_unseen`·`collect_record`(security definer, 상태 `pending`·`auto_scraped` true 고정, 한 번에 3개까지), 계정 `collector`(함수 2개 실행 권한만, 콘솔이 아니라 SQL로 만듦)
+- 자동 수집용(`neon/collect.sql`, 운영 DB에 실행함 2026-11-28): `collect_seen`(AI까지 보낸 글의 링크·결과), `games.collect_meta`(jsonb, 심의 참고, 관리자 화면만), 함수 `collect_unseen`·`collect_record`(security definer, 상태 `pending`·`auto_scraped` true 고정, 한 번에 3개까지), 계정 `collector`(함수 2개 실행 권한만, 콘솔이 아니라 SQL로 만듦)
 - 심의 칼럼: `status`('pending'/'approved'/'rejected'), `auto_scraped`(A방식 false / B방식 true), `created_by`(등록한 관리자), `approved_by`, `approved_at`, `rejection_reason`(거절 시 필수, DB 제약조건), `admin_notes`, `updated_at`(트리거로 자동 갱신)
 - 원본 링크는 `link` 칼럼 (별도 `source_url` 없음)
 - 썸네일은 `thumbnail_url` 칼럼. 원본 사이트의 이미지 주소만 저장하고 파일은 복사하지 않는다 (사용자 카드·상세는 있을 때만, 관리자 심의 세부는 없으면 '썸네일 없음')
