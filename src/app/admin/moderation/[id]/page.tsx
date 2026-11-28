@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import GameInfo from "@/components/GameInfo";
+import CollectDraft from "@/components/admin/CollectDraft";
 import ReviewPanel from "@/components/admin/ReviewPanel";
 import Thumbnail from "@/components/ui/Thumbnail";
 import NavLink from "@/components/ui/NavLink";
@@ -54,7 +55,12 @@ export default async function ModerationDetailPage({ params }: { params: Promise
 
       {/* 사용자 화면과 달리 없어도 자리를 보여 준다 (승인 전에 빠진 것을 알 수 있게) */}
       <Thumbnail src={game.thumbnailUrl} fallback="썸네일 없음" className="aspect-video w-full max-w-sm rounded" />
-      {game.summary && <p className="text-sm leading-relaxed whitespace-pre-line">{game.summary}</p>}
+      {/* 자동 수집 게임은 소개글을 원문 요약과 나란히 (AI 초안 상자 안에서) */}
+      {game.autoScraped ? (
+        <CollectDraft summary={game.summary} meta={game.collectMeta} />
+      ) : (
+        game.summary && <p className="text-sm leading-relaxed whitespace-pre-line">{game.summary}</p>
+      )}
       {game.tags.length > 0 && <p className="text-xs text-gray-500">{game.tags.map((t) => `#${t}`).join(" ")}</p>}
       {/* 사용자 상세 페이지와 같은 항목. 빠진 칸도 '—'로 보여서 승인 전에 확인할 수 있게 */}
       <GameInfo game={game} showEmpty />
