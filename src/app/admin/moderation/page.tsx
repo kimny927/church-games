@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 
 const TABS: ReviewStatus[] = ["pending", "approved", "rejected"];
 
-// 세부 페이지에서 승인·거절·다시 심의하기에 성공하면 ?done=approved|rejected|pending 으로 돌아온다
+// 세부 페이지에서 승인·거절·다시 심의하기·영구 삭제에 성공하면 ?done=approved|rejected|pending|deleted 로 돌아온다
 const DONE_MESSAGE: Record<string, string> = {
   approved: "승인되었습니다.",
   rejected: "거절되었습니다.",
   pending: "다시 심의 대기로 옮겼습니다.",
+  deleted: "영구 삭제했습니다.",
 };
 
 // 심의 목록: 대상 게임을 보여 주기만 한다. 승인·거절은 세부 페이지(/admin/moderation/[id])에서

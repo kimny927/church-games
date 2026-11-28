@@ -186,6 +186,13 @@ export async function revertToPending(args: { id: string; noteLine: string; maxN
   return row?.status === "approved" ? "too_long" : "changed";
 }
 
+// 거절된 게임 영구 삭제 (owner·admin, actions.ts에서 확인). 거절 상태일 때만 지워서, 그 사이 다시 승인된 게임은 남는다.
+// collect_seen은 링크로만 이어져 있어 그대로 남는다 → 자동 수집이 같은 글을 다시 가져오지 않음
+export async function deleteRejectedGame(id: string): Promise<boolean> {
+  const rows = await sql()`delete from games where id = ${id} and status = 'rejected' returning id`;
+  return rows.length > 0;
+}
+
 // 승인 전 '원본 확인'이 필요한지 판단할 때. 폼 값이 아니라 DB를 믿는다
 export async function isAutoScraped(id: string): Promise<boolean> {
   const rows = await sql()`select auto_scraped from games where id = ${id}`;

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { ActionState } from "@/app/admin/admins/actions";
-import { approveGame, rejectGame, revertGame, saveNotes } from "@/app/admin/moderation/actions";
+import { approveGame, deleteGame, rejectGame, revertGame, saveNotes } from "@/app/admin/moderation/actions";
 import AlertDialog from "@/components/ui/AlertDialog";
 import SubmitButton from "@/components/ui/SubmitButton";
 import type { ModerationGame } from "@/lib/types";
@@ -10,7 +10,7 @@ import ActionMessage from "./ActionMessage";
 
 type Action = (prev: ActionState, form: FormData) => Promise<ActionState>;
 
-// 심의 세부 페이지의 승인·거절(거절로 내리기)·다시 심의하기·메모. 성공하면 서버가 목록으로 보내고(redirect), 실패하면 여기 머물며 팝업으로 알린다
+// 심의 세부 페이지의 승인·거절(거절로 내리기)·다시 심의하기·영구 삭제·메모. 성공하면 서버가 목록으로 보내고(redirect), 실패하면 여기 머물며 팝업으로 알린다
 export default function ReviewPanel({ game }: { game: ModerationGame }) {
   const [failure, setFailure] = useState<string | null>(null);
   const report = (action: Action): Action => async (prev, form) => {
@@ -21,8 +21,9 @@ export default function ReviewPanel({ game }: { game: ModerationGame }) {
   const [, approveAction, approving] = useActionState(report(approveGame), null);
   const [, rejectAction, rejecting] = useActionState(report(rejectGame), null);
   const [, revertAction, reverting] = useActionState(report(revertGame), null);
+  const [, deleteAction, deleting] = useActionState(report(deleteGame), null);
   const [notesState, notesAction] = useActionState(saveNotes, null);
-  const deciding = approving || rejecting || reverting;
+  const deciding = approving || rejecting || reverting || deleting;
   // 자동 수집 게임은 원본 확인 체크 전에는 승인 버튼을 끈다 (서버 액션에서도 다시 확인)
   const [sourceChecked, setSourceChecked] = useState(false);
   const needsCheck = game.autoScraped && !sourceChecked;
@@ -106,6 +107,24 @@ export default function ReviewPanel({ game }: { game: ModerationGame }) {
               className="whitespace-nowrap rounded border border-gray-400 px-3 py-2 text-gray-700"
             >
               다시 심의하기
+            </SubmitButton>
+          </form>
+        )}
+        {game.status === "rejected" && (
+          <form
+            action={deleteAction}
+            onSubmit={confirmSubmit(
+              `'${game.name}'을(를) 영구 삭제할까요?\n거절 사유·메모·심의 기록도 함께 사라지고 되돌릴 수 없어요.`,
+            )}
+            className="pt-2 text-right"
+          >
+            {hidden}
+            <SubmitButton
+              disabled={deciding}
+              pendingText="삭제 중…"
+              className="rounded bg-red-600 px-3 py-2 font-semibold text-white"
+            >
+              영구 삭제
             </SubmitButton>
           </form>
         )}
