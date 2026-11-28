@@ -70,7 +70,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 
 **자동화:**
 - GitHub Actions: PR 빌드 CI(`ci.yml`)만. 비밀값을 넣지 않는다 (공개 저장소라 로그가 공개됨)
-- 자동 수집: 수집 전용 Worker(`workers/collect/`)의 cron, 하루 1번 최대 3개 (만드는 중). 이유는 `docs/decisions.md` 2026-11-25
+- 자동 수집: 수집 전용 Worker(`workers/collect/`)의 cron, 하루 1번 최대 3개 (2026-11-28 운영에서 켬, 관리자 화면 `/admin/collect`에서 켜기/끄기). 이유는 `docs/decisions.md` 2026-11-25
 
 **인증:**
 - 관리자 (3주차): Better Auth 이메일+비밀번호. 역할 `owner`(최고 관리자) / `admin`(관리자), 공개 가입 금지, 해시는 Web Crypto PBKDF2. 이유는 `docs/decisions.md` 2026-11-19
@@ -135,7 +135,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `neon/auth.sql`: Better Auth 테이블 (user, session, account, verification, rateLimit)
 - 서버에서 `auth.api.createUser` 등 관리 API를 부를 때는 반드시 `headers: await headers()`를 넘긴다. 헤더가 없으면 권한 확인을 건너뛴다 (첫 owner 생성 스크립트만 예외)
 
-**자동 수집 (`workers/collect/src/`, 만드는 중):** Next.js 코드(`@/` 경로, `next/*`)를 쓰지 않는다. 수집 전용 Worker에서 돈다
+**자동 수집 (`workers/collect/src/`):** Next.js 코드(`@/` 경로, `next/*`)를 쓰지 않는다. 수집 전용 Worker에서 돈다
 - `search.ts`: 카카오 Daum 블로그·유튜브 검색 API → 후보 (네이버 검색 API는 쓰지 않음, decisions 2026-11-25). 유튜브 키는 주소가 아니라 헤더로
 - `rules.ts`: 검색 키워드, 거를 말(이단·광고), 게임 관련 말(없으면 거름), 주입 흔적 패턴. 이단 단체 이름은 심의에서 발견할 때마다 추가한다. `candidates.ts`: 검색 → 주소 맞추기 → 거르기 → 순서(출처를 번갈아 최신순, AI 확신도로 정하지 않음)
 - `text.ts`: 태그·엔티티·안 보이는 문자 제거, NFKC. 비교용 `compact`(붙여 씀, 우회 잡기)·`spaced`(짧은 낱말은 낱말 시작에서만)
@@ -149,8 +149,8 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - `workers/collect/wrangler.jsonc`: `church-games-collect`, 공개 주소 없음(`workers_dev: false`), cron `0 21 * * *`(06:00 KST). 깨어나면 `collect_enabled()`부터 확인해 꺼져 있으면 'off'만 기록 (`index.ts`의 `runScheduled`, 설정을 못 읽어도 꺼짐). 로컬 비밀값은 `workers/collect/.dev.vars`(커밋 금지)
 - `src/lib/game-id.ts`: 게임 id 생성. 사이트(`db.ts`)와 수집 Worker가 같이 쓴다
 - 3단계 PR ①(#23, 끝): 위 Worker·DB. 운영 DB에 `neon/collect.sql` 실행·`collect:db-check` 통과, Secret 4개, `collect:deploy`(cron 없음)까지 2026-11-28 반영. 로컬 `collect:dev`는 `.dev.vars`의 테스트 브랜치(`collect-test`) 주소로
-- PR ②(`feat/moderation-ai-draft`): 심의 세부 'AI 초안'(`src/components/admin/CollectDraft.tsx`)과 승인 전 '원본 확인' 체크. 체크 여부는 저장하지 않는다(decisions 2026-11-28). AI 소개글은 `collect_meta.aiSummary`에 추천 문구로 남고 수정 화면에서 복사·'소개글에 넣기'. 병합 후 `collect:deploy` 필요(aiSummary 저장)
-- PR ③(`feat/collect-toggle`): 관리자 화면 on/off·실행 기록(`neon/collect-settings.sql`), cron 켬. 병합 후 운영 DB에 `collect-settings.sql` → `collect:db-check` → `collect:deploy` → 화면에서 켜기 → 다음 날 실행 기록·CPU 10ms 확인
+- PR ②(#24, 끝): 심의 세부 'AI 초안'(`src/components/admin/CollectDraft.tsx`)과 승인 전 '원본 확인' 체크. 체크 여부는 저장하지 않는다(decisions 2026-11-28). AI 소개글은 `collect_meta.aiSummary`에 추천 문구로 남고 수정 화면에서 복사·'소개글에 넣기'. `collect:deploy`까지 반영
+- PR ③(#25, 끝): 관리자 화면 on/off·실행 기록(`neon/collect-settings.sql`), cron 켬. 운영 DB에 `collect-settings.sql` → `collect:db-check` 21개 통과 → `collect:deploy` → 화면에서 켜기까지 2026-11-28 반영. 남은 일: 첫 실행(11-29 06:00) 기록·Cloudflare 대시보드 CPU 10ms 확인
 
 **GitHub Actions:**
 - `.github/workflows/ci.yml`: PR·main push마다 lint + build
@@ -172,7 +172,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 - 장점: 신뢰할 수 있는 콘텐츠만 추가, 품질 관리 용이
 - 시간: 진선이가 월 5~15개 정도 입력 가능
 
-**B. 자동 수집 (만드는 중)**
+**B. 자동 수집 (운영 중, `/admin/collect`에서 켜기/끄기)**
 - 수집 전용 Worker의 cron이 하루 1번, 최대 3개
 - 카카오 Daum 블로그·유튜브 공식 검색 API로 키워드 검색 (RSS는 아는 채널만 볼 수 있어서)
 - 코드로 거른 뒤 Claude Haiku가 게임인지 판단하고 초안 작성 → Neon에 저장 (status: 'pending', `auto_scraped` true)
@@ -227,7 +227,7 @@ AI-Native Engineer로 성장하기 위해 매 작업에서 다양한 기술 영�
 ## Neon DB 스키마 (`neon/schema.sql`)
 - 지금은 `games` 테이블만 있다. 회원·댓글·후기는 로그인 방식을 정하는 4주차에 추가.
 - 자동 수집용(`neon/collect.sql`, 운영 DB에 실행함 2026-11-28): `collect_seen`(AI까지 보낸 글의 링크·결과), `games.collect_meta`(jsonb, 심의 참고, 관리자 화면만), 함수 `collect_unseen`·`collect_record`(security definer, 상태 `pending`·`auto_scraped` true 고정, 한 번에 3개까지), 계정 `collector`(함수만 실행, 콘솔이 아니라 SQL로 만듦)
-- 켜기/끄기(`neon/collect-settings.sql`, **운영 DB에는 PR ③ 병합 후 실행**): `collect_settings`(한 줄, `enabled` 기본 false·`updated_by`·`updated_at`), `collect_runs`(ok/off/failed·요약 jsonb, 최근 60개), collector용 함수 `collect_enabled`·`collect_log_run`(4KB 넘는 요약 거절). 사이트(소유자 계정)는 표를 직접 읽고 씀
+- 켜기/끄기(`neon/collect-settings.sql`, 운영 DB에 실행함 2026-11-28): `collect_settings`(한 줄, `enabled` 기본 false·`updated_by`·`updated_at`), `collect_runs`(ok/off/failed·요약 jsonb, 최근 60개), collector용 함수 `collect_enabled`·`collect_log_run`(4KB 넘는 요약 거절). 사이트(소유자 계정)는 표를 직접 읽고 씀
 - 심의 칼럼: `status`('pending'/'approved'/'rejected'), `auto_scraped`(A방식 false / B방식 true), `created_by`(등록한 관리자), `approved_by`, `approved_at`, `rejection_reason`(거절 시 필수, DB 제약조건), `admin_notes`, `updated_at`(트리거로 자동 갱신)
 - 원본 링크는 `link` 칼럼 (별도 `source_url` 없음)
 - 썸네일은 `thumbnail_url` 칼럼. 원본 사이트의 이미지 주소만 저장하고 파일은 복사하지 않는다 (사용자 카드·상세는 있을 때만, 관리자 심의 세부는 없으면 '썸네일 없음')
